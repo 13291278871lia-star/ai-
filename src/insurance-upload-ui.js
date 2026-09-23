@@ -23,11 +23,33 @@ export function bindUpload({apply,clear,get,render}){
    status(`已套用 ${rows.length} 個年期，圖表與PPT使用相同數據。${mapped.skipped?`略過 ${mapped.skipped} 行非年度／第0年記錄。`:''}請檢查右側結果；缺失輸入會阻止下載。`);
   }catch(e){status('未套用：'+e.message);}};
  };
- host.querySelector('#insUploadFile').onchange=async event=>{
-  const file=event.target.files[0];if(!file)return;const current=++revision;upload=null;clear();host.querySelector('#insUploadMapping').innerHTML='';status('正在本機讀取資料…');
+ const manualRead=async(file,current)=>{
   try{const result=await readUpload(file,t=>{if(current===revision)status(t);});if(current!==revision||!host.isConnected)return;upload={...result,filename:file.name};
  if(!result.tables.length){status(`已識別 ${file.name}（${result.slideCount||0}頁）。`+(result.warnings||[]).join(' '));host.querySelector('#insUploadMapping').innerHTML=`<details open><summary>查看PPTX提取文字</summary><pre>${esc(result.text||'未找到可讀取文字，可能是圖片型簡報。')}</pre></details>`;return;}
  choose();}catch(e){if(current===revision)status('讀取失敗：'+e.message);}
+ };
+ host.querySelector('#insUploadFile').onchange=async event=>{
+  const file=event.target.files[0];if(!file)return;const current=++revision;upload=null;clear();host.querySelector('#insUploadMapping').innerHTML='';
+  if(file.name.toLowerCase().endsWith('.pdf')){
+   status('正在後端解析計劃書…');
+   try{
+    const resp=await fetch('/api/parse-proposal',{method:'POST',headers:{'Content-Type':'application/pdf'},body:await file.arrayBuffer()});
+    if(current!==revision||!host.isConnected)return;
+    if(resp.ok){
+     const data=await resp.json();const p=data.profile||{};
+     if(data.known&&p.product&&p.age&&p.premium){
+      apply({product:p.product,age:p.age,premium:p.premium,years:p.years||1,levy:p.levy??0,fx:p.fx||6.8,source:`${file.name} · 後端自動解析（${data.rowCount}個年度）`,rows:data.rows});
+      status(`✅ 已自動辨識 AIA 計劃書，套用 ${data.rowCount} 個年度數據。正在下載完整模版 PPT…`);
+      setTimeout(()=>{const btn=document.querySelector('#downloadInsurance');if(btn&&!btn.disabled){btn.click();}else{status(`已套用數據，請按右側「下載完整模版 PPT」按鈕。`);}},700);
+      host.querySelector('#insUploadMapping').innerHTML=`<p class="tiny">已自動套用後端解析結果（${data.rowCount}年）。如需手動調整，<button type="button" class="text-button" id="switchManualMap">改用瀏覽器手動對應</button>。</p>`;
+      host.querySelector('#switchManualMap').onclick=()=>{status('改用手動對應，請稍候…');manualRead(file,current);};
+      return;
+     }
+     status(`後端未辨識為標準 AIA 計劃書（${(data.warnings||[]).join('；')||'未知格式'}），改用瀏覽器手動對應…`);
+    }else{status('後端解析未成功（HTTP '+resp.status+'），改用瀏覽器手動對應…');}
+   }catch(e){if(current===revision)status('後端解析失敗：'+e.message+'，改用瀏覽器手動對應…');}
+  }
+  status('正在本機讀取資料…');manualRead(file,current);
  };
  host.querySelector('#saveInsuranceData').onclick=()=>{try{const c=get();if(!c.product||!c.rows.length)throw Error('請先填寫完整方案');const blob=new Blob([JSON.stringify({...c,currency:'USD'},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='保險方案資料.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status('已下載方案JSON，可重新上傳使用。');}catch(e){status(e.message);}};
 }

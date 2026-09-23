@@ -143,6 +143,89 @@ def build_template_ppt(profile, rows, template_path):
     return bio.getvalue()
 
 
+def parse_proposal(file_bytes):
+    """Parse an AIA proposal PDF server-side with pdfplumber.
+
+    The in-browser pdfjs path recognises only an 8-column "known" layout that
+    no real AIA proposal matches (the real 詳細說明 table is 9 columns with
+    age and policy year split, and each pdfplumber cell is newline-packed
+    with ~5 years). This function splits those packed cells back into yearly
+    rows, auto-maps the AIA 9-column layout (year=1, guaranteed=3, bonus=4,
+    total=5), validates total ≈ guaranteed + bonus, and extracts proposal
+    metadata (product / age / premium / levy / currency). Returns
+    {known, profile, rows:[[year, guaranteed, bonus], ...], rowCount,
+    warnings}. On non-AIA or unrecognised PDFs known=false so the browser
+    falls back to the in-browser manual mapping path.
+    """
+    import io as _io
+    import pdfplumber
+
+    pdf = pdfplumber.open(_io.BytesIO(file_bytes))
+    full_text = "\n".join((p.extract_text() or "") for p in pdf.pages)
+    meta = {}
+    m = re.search(r"計劃[：:]\s*(.+)", full_text)
+    if m:
+        meta["product"] = m.group(1).strip().split("\n")[0].strip()[:70]
+    m = re.search(r"年[齡龄][：:]\s*(\d+)", full_text)
+    if m:
+        meta["age"] = int(m.group(1))
+    m = re.search(r"([\d,]+\.\d{2})\s*整付保費", full_text)
+    if m:
+        meta["premium"] = float(m.group(1).replace(",", ""))
+        meta["years"] = 1
+    else:
+        m = re.search(r"年[繳缴]保[費费][^\d]*([\d,]+\.\d{2})", full_text)
+        if m:
+            meta["premium"] = float(m.group(1).replace(",", ""))
+            m2 = re.search(r"供款年期[：:]\s*(\d+)\s*年", full_text)
+            meta["years"] = int(m2.group(1)) if m2 else 1
+    m = re.search(r"保費徵費\s*([\d,]+\.\d{2})", full_text)
+    meta["levy"] = float(m.group(1).replace(",", "")) if m else 0
+    m = re.search(r"保[單单][貨货][幣币][：:]\s*(\S+)", full_text)
+    meta["currency"] = (m.group(1) if m else "美元").strip()
+    meta["fx"] = 6.8
+
+    raw = []
+    for page in pdf.pages:
+        for tbl in page.extract_tables():
+            if not tbl or not tbl[0] or len(tbl[0]) < 6:
+                continue
+            for row in tbl:
+                cells = [(c or "") for c in row]
+                parts = [c.split("\n") for c in cells]
+                n = max((len(p) for p in parts), default=0)
+                for k in range(n):
+                    vals = [parts[ci][k] if k < len(parts[ci]) else "" for ci in range(len(cells))]
+                    vals = [v.replace(",", "").strip() for v in vals]
+                    if len(vals) < 6 or not vals[0].isdigit() or not vals[1].isdigit():
+                        continue
+                    try:
+                        year = int(vals[1])
+                        guar = float(vals[3]) if vals[3] else 0
+                        bonus = float(vals[4]) if vals[4] else 0
+                        total = float(vals[5]) if vals[5] else (guar + bonus)
+                    except (ValueError, IndexError):
+                        continue
+                    if year < 1 or year > 120:
+                        continue
+                    raw.append((year, guar, bonus, total))
+
+    by_year = {}
+    for y, g, b, t in raw:
+        by_year[y] = (y, g, b, t)
+    out = sorted(by_year.values(), key=lambda x: x[0])
+    valid = sum(1 for (y, g, b, t) in out if abs(t - (g + b)) <= max(2, t * 0.001))
+    mapping_ok = len(out) >= 5 and valid >= len(out) * 0.8
+    known = bool(mapping_ok and meta.get("premium") and meta.get("age") and meta.get("product"))
+    rows_json = [[y, g, b] for (y, g, b, t) in out]
+    warnings = []
+    if not known:
+        warnings.append("未辨識為標準 AIA 詳細說明表格" if not mapping_ok else "缺少產品/年齡/保費資訊")
+    if meta.get("currency") and meta["currency"] not in ("美元", "USD", "美金"):
+        warnings.append(f"保單貨幣為 {meta['currency']}，本工具僅支援美元")
+    return {"known": known, "profile": meta, "rows": rows_json, "rowCount": len(rows_json), "warnings": warnings}
+
+
 class AppHandler(SimpleHTTPRequestHandler):
     extensions_map = SimpleHTTPRequestHandler.extensions_map | {
         ".js": "application/javascript",
@@ -168,6 +251,9 @@ class AppHandler(SimpleHTTPRequestHandler):
         request = urlparse(self.path)
         if request.path == "/api/ppt-from-template":
             self.send_template_ppt()
+            return
+        if request.path == "/api/parse-proposal":
+            self.send_parsed_proposal()
             return
         self.send_error(404, "Not found")
 
@@ -227,6 +313,36 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(data)
+
+    def send_parsed_proposal(self):
+        """Auto-parse an AIA proposal PDF server-side (pdfplumber) and return
+        {known, profile, rows, rowCount, warnings} as JSON. The browser calls
+        this on PDF upload; if known=true it auto-applies the result and
+        triggers the template-PPT download, so the whole upload→PPT flow is
+        one action. Falls back to in-browser manual mapping when known=false
+        or pdfplumber is unavailable."""
+        length = int(self.headers.get("Content-Length", 0) or 0)
+        if length <= 0 or length > 10_000_000:
+            self.send_error(400, "Invalid request size")
+            return
+        raw = self.rfile.read(length)
+        try:
+            import pdfplumber  # noqa: F401
+        except ImportError:
+            self.send_error(500, "pdfplumber not installed. Run: pip install pdfplumber")
+            return
+        try:
+            result = parse_proposal(raw)
+        except Exception as exc:  # surface the real cause to the browser
+            self.send_error(500, f"PDF parse failed: {exc}")
+            return
+        body = json.dumps(result, ensure_ascii=False).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
 
     def send_library_files(self, query):
         library = query.get("library", [""])[0]
