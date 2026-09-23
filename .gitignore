@@ -20,12 +20,7 @@ tmp_*.py
 /*.xlsx
 /*.ndjson
 
-# 内部资料及大型媒体：如需版本管理，请使用私人仓库和 Git LFS。
-assets/library/
-assets/market-info/
-assets/discontinued/
-assets/promotion/
-assets/training/
-assets/ppt-reference/*.pdf
-assets/ppt-reference/*.pptx
-assets/ppt-reference/*.xlsx
+# 视频暂时保留在本机，不上传代码仓库。
+assets/**/*.mov
+assets/**/*.mp4
+assets/**/*.m4v
