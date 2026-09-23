@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {csvRows,makeTable,mapTable,pdfLines,pdfTable,pdfMeta,numeric,readUpload} from '../src/insurance-import.js';
+import {calculate,example} from '../src/insurance-ppt.js';
+import {chartScale,chartSvg} from '../src/insurance-chart.js';
+const raw=csvRows(fs.readFileSync('assets/ppt-reference/import-example.csv','utf8'));
+const table=makeTable('sample',raw),c=table.columns;
+assert.equal(table.meta.premium,20000);assert.equal(table.meta.age,35);
+const mapped=mapTable(table,{...c,mode:'split',age:35});assert.deepEqual(mapped.rows.map(r=>r[0]),[10,20,35]);
+const results=calculate({...table.meta,source:'CSV測試',rows:mapped.rows});assert.equal(results[0].usd,130000);assert.ok(results.every(r=>Number.isFinite(r.rate)));
+assert.deepEqual(csvRows('year,total\n20,"157,510"'),[['year','total'],['20','157,510']]);assert.ok(Number.isNaN(numeric('')));
+assert.throws(()=>csvRows('year,total\n20,"100'));
+const totalTable={rows:[['60歲',157510],['70歲',255880]]};assert.deepEqual(mapTable(totalTable,{year:0,total:1,mode:'total',age:40}).rows,[[20,157510],[30,255880]]);
+assert.throws(()=>mapTable(totalTable,{year:0,total:1,mode:'total',age:NaN}));
+assert.throws(()=>mapTable({rows:[[20,100],[20,200]]},{year:0,total:1,mode:'total',age:40}));
+assert.throws(()=>mapTable({rows:[[20,'']]},{year:0,total:1,mode:'total',age:40}));
+const t=calculate({...example,rows:[[1,80000],[10,120000],[27,450000]]});assert.equal(t[0].guaranteed,null);assert.ok(t[0].rate<0);assert.ok(chartScale(t).min<0);
+assert.ok(chartSvg({...example,product:'<script>x</script>'},t).includes('&lt;script&gt;'));assert.ok(!chartSvg({...example,product:'<script>x</script>'},t).includes('<script>'));
+const early=calculate({...example,premium:20000,years:5,levy:0,rows:[[1,18000]]});assert.ok(Math.abs(early[0].rate+.1)<1e-10);
+const jsonFile={name:'new.json',size:100,text:async()=>JSON.stringify({...example,product:'新產品',premium:90000,rows:[[10,200000],[25,800000]]})};const j=await readUpload(jsonFile);assert.equal(j.tables[0].meta.premium,90000);
+// End-to-end PDF extraction with local PDF.js, using the same row detection as the browser.
+const {getDocument}=await import('/Users/choix/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/pdfjs-dist/legacy/build/pdf.mjs');
+const pdf=await getDocument({data:new Uint8Array(fs.readFileSync('assets/ppt-reference/policy-example.pdf')),useSystemFonts:true,isEvalSupported:false}).promise;
+const p1=pdfLines((await(await pdf.getPage(1)).getTextContent()).items),p2=pdfLines((await(await pdf.getPage(2)).getTextContent()).items);
+const meta=pdfMeta(p1),pt=pdfTable(p2,2);assert.equal(meta.age,40);assert.equal(meta.premium,105760);assert.equal(meta.levy,12.76);assert.equal(pt.columns.guaranteed,2);
+const pr=mapTable(pt,{...pt.columns,mode:'split',age:meta.age}).rows;assert.deepEqual(pr.filter(r=>[20,30,40,50,60].includes(r[0])),example.rows);
+await pdf.destroy();console.log('PASS: CSV quoting, metadata, totals-only, age/year mapping, conflicts, missing values, negative IRR, nonuniform years, JSON, PDF extraction');

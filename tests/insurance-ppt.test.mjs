@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {irr,calculate,example,parseRows,prepaidInterest,createDeck} from '../src/insurance-ppt.js';
+import PptxGenJS from 'pptxgenjs';
+assert.ok(Math.abs(irr([-100,0,121])-.1)<1e-10);
+assert.ok(Math.abs(irr([-100,0,81])+.1)<1e-10);
+assert.throws(()=>irr([-100,0,0]));assert.throws(()=>irr([-100,230,-132]));
+const rows=calculate(example);
+assert.deepEqual(rows.map(r=>r.usd),[157510,255880,423620,755231,1277579]);
+for(const row of rows)assert.ok(Math.abs(row.rate-(Math.pow(row.usd/105772.76,1/row.year)-1))<1e-10);
+assert.equal(rows[4].age,100);
+assert.equal(rows[0].rmb,1071068);
+const changed=calculate({...example,fx:7});assert.equal(changed[0].rmb,1102570);assert.equal(changed[0].rate,rows[0].rate);
+const multi=calculate({...example,years:5,premium:100000,levy:0,rows:[[20,1357738,0]]})[0];assert.ok(Math.abs(multi.rate-.05688745613865298)<1e-8);
+assert.throws(()=>calculate({...example,rows:[[20,1,2],[20,3,4]]}));assert.throws(()=>parseRows('20,,3'));assert.throws(()=>calculate({...example,premium:0}));
+assert.ok(Math.abs(prepaidInterest(100000)[3].total-(400000*1.038**4-100000*(1.038**3+1.038**2+1.038+1)))<1e-5,'check original Excel recurrence');
+console.log(JSON.stringify(rows.map(({flows,...r})=>r),null,2));
+if(process.argv[2])await createDeck(PptxGenJS,example,rows).writeFile({fileName:process.argv[2]});
+console.log('PASS: IRR, annuity timing, source values, FX sensitivity, validation, prepaid recurrence');
