@@ -6,7 +6,141 @@ import re
 import unicodedata
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
+
+
+def build_template_ppt(profile, rows, template_path):
+    """Open the user's GF template, fill slide-1 table/text and add a native
+    editable line-chart slide. Returns the saved .pptx as bytes.
+
+    pptxgenjs (used client-side) can only *generate* a fresh deck; it cannot
+    open an existing .pptx. Filling the real 11-page template therefore has to
+    happen server-side with python-pptx, which is why this lives here.
+    """
+    from io import BytesIO
+    from pptx import Presentation
+    from pptx.util import Pt, Inches
+    from pptx.chart.data import CategoryChartData
+    from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
+    from pptx.enum.text import PP_ALIGN
+
+    fx = float(profile.get("fx", 6.8) or 6.8)
+    premium = float(profile.get("premium", 0) or 0)
+    years = int(profile.get("years", 1) or 1)
+    product = str(profile.get("product", "") or "")
+    source = str(profile.get("source", "") or "")
+    age = profile.get("age", "")
+    pay_term = "整付保費" if years == 1 else f"{years}年"
+
+    prs = Presentation(str(template_path))
+    slide0 = prs.slides[0]
+
+    def set_textbox(shape, lines):
+        tf = shape.text_frame
+        for p in list(tf.paragraphs)[1:]:
+            p._p.getparent().remove(p._p)
+        first = tf.paragraphs[0]
+        for i, line in enumerate(lines):
+            if i == 0:
+                first.text = line
+            else:
+                tf.add_paragraph().text = line
+
+    by_year = {int(r["year"]): r for r in rows if "year" in r}
+
+    # --- fill slide-1 text placeholders (matched by shape name) ---
+    for shape in slide0.shapes:
+        if not shape.has_text_frame:
+            continue
+        nm = shape.name
+        if nm == "文字方塊 4":  # main title
+            set_textbox(shape, [f"香港友邦保险 - {product}"])
+        elif nm == "文字方塊 6":  # 目标 / 优点
+            set_textbox(shape, [
+                "目标：终身分红保障，财富传承与灵活现金提取并重",
+                "优点：整付保费锁定价值，享终期分红非保证收益",
+            ])
+        elif nm == "文字方塊 8":  # 供款额 / 存款期 / 总供款
+            set_textbox(shape, [
+                f"供款额：{premium:,.0f} 美元 ({premium * fx:,.0f} 人民币)",
+                f"存款期：{pay_term}    总供款：{premium * years:,.0f} 美元 ({premium * years * fx:,.0f} 人民币)",
+            ])
+
+    # --- fill slide-1 summary table (表格 1): 20/30/40/50年后 ---
+    for shape in slide0.shapes:
+        if shape.has_table and shape.name == "表格 1":
+            tbl = shape.table
+            for ri, yr in enumerate((20, 30, 40, 50), start=1):
+                r = by_year.get(yr)
+                if not r:
+                    continue
+                usd = float(r.get("usd", 0) or 0)
+                rmb = float(r.get("rmb", usd * fx) or usd * fx)
+                rate = float(r.get("rate", 0) or 0)
+                tbl.cell(ri, 0).text = f"{yr}年后"
+                tbl.cell(ri, 1).text = f"{usd:,.0f}"
+                tbl.cell(ri, 2).text = f"{rmb:,.0f}"
+                tbl.cell(ri, 3).text = f"{rate * 100:.2f}%"
+                for c in range(4):
+                    for p in tbl.cell(ri, c).text_frame.paragraphs:
+                        p.alignment = PP_ALIGN.CENTER
+                        for run in p.runs:
+                            run.font.size = Pt(14)
+                            run.font.bold = True
+            break
+
+    # --- add a native, editable line-chart slide (value growth) ---
+    sorted_rows = sorted(rows, key=lambda r: r["year"])
+    chart_data = CategoryChartData()
+    chart_data.categories = [f"第{int(r['year'])}年" for r in sorted_rows]
+    has_split = any(r.get("guaranteed") is not None for r in sorted_rows)
+    if has_split:
+        chart_data.add_series("保证金额", [float(r.get("guaranteed") or 0) for r in sorted_rows])
+        chart_data.add_series("非保证分红", [float(r.get("bonus") or 0) for r in sorted_rows])
+    chart_data.add_series("退保总额", [float(r.get("usd", 0) or 0) for r in sorted_rows])
+
+    blank = None
+    for layout in prs.slide_layouts:
+        if "blank" in layout.name.lower() or "空白" in layout.name:
+            blank = layout
+            break
+    chart_slide = prs.slides.add_slide(blank or prs.slide_layouts[6])
+
+    title = f"{product} — 预期退保价值增长（{premium:,.0f}美元{pay_term}）"
+    tx = chart_slide.shapes.add_textbox(Inches(0.4), Inches(0.2), Inches(12.5), Inches(0.8))
+    tx.text_frame.word_wrap = True
+    tp = tx.text_frame.paragraphs[0]
+    tp.text = title
+    tp.font.size = Pt(22)
+    tp.font.bold = True
+
+    chart_shape = chart_slide.shapes.add_chart(
+        XL_CHART_TYPE.LINE, Inches(0.4), Inches(1.1), Inches(12.5), Inches(5.8), chart_data
+    )
+    chart = chart_shape.chart
+    chart.has_title = True
+    chart.chart_title.text_frame.paragraphs[0].text = "预期退保价值增长曲线（美元）"
+    chart.chart_title.text_frame.paragraphs[0].font.size = Pt(16)
+    chart.has_legend = True
+    chart.legend.position = XL_LEGEND_POSITION.BOTTOM
+    chart.legend.include_in_layout = False
+    chart.plots[0].has_data_labels = False
+    chart.value_axis.tick_labels.number_format = "#,##0"
+    chart.value_axis.tick_labels.font.size = Pt(9)
+    chart.value_axis.has_title = True
+    chart.value_axis.axis_title.text_frame.paragraphs[0].text = "金额 (美元)"
+    chart.value_axis.axis_title.text_frame.paragraphs[0].font.size = Pt(10)
+    chart.category_axis.tick_labels.font.size = Pt(8)
+
+    foot = chart_slide.shapes.add_textbox(Inches(0.4), Inches(7.0), Inches(12.5), Inches(0.4))
+    fp = foot.text_frame.paragraphs[0]
+    fp.text = f"*以美元兑人民币{fx}计算*  以上数据只供参考, 详情请参阅建议书。来源：{source}"
+    fp.font.size = Pt(9)
+    fp.font.italic = True
+
+    bio = BytesIO()
+    prs.save(bio)
+    return bio.getvalue()
 
 
 class AppHandler(SimpleHTTPRequestHandler):
@@ -29,6 +163,70 @@ class AppHandler(SimpleHTTPRequestHandler):
             self.send_product_content(parse_qs(request.query))
             return
         super().do_GET()
+
+    def do_POST(self):
+        request = urlparse(self.path)
+        if request.path == "/api/ppt-from-template":
+            self.send_template_ppt()
+            return
+        self.send_error(404, "Not found")
+
+    def send_template_ppt(self):
+        """Fill the user's GF template (server-side, python-pptx) and return a
+        full editable .pptx with the summary table filled and a native
+        line-chart slide added. The browser cannot do this with pptxgenjs
+        because that library can only build a deck from scratch, not open an
+        existing template."""
+        length = int(self.headers.get("Content-Length", 0) or 0)
+        if length <= 0 or length > 2_000_000:
+            self.send_error(400, "Invalid request size")
+            return
+        raw = self.rfile.read(length)
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            self.send_error(400, "Invalid JSON")
+            return
+        profile = payload.get("profile") if isinstance(payload, dict) else None
+        rows = payload.get("rows") if isinstance(payload, dict) else None
+        if not isinstance(profile, dict) or not isinstance(rows, list) or not rows:
+            self.send_error(400, "Missing profile or rows")
+            return
+
+        template_path = Path("assets/ppt-reference/gf-template.pptx")
+        site_root = Path.cwd().resolve()
+        template_path = (site_root / template_path).resolve()
+        try:
+            template_path.relative_to(site_root)
+        except ValueError:
+            self.send_error(400, "Invalid template path")
+            return
+        if not template_path.is_file():
+            self.send_error(404, "GF template not found at assets/ppt-reference/gf-template.pptx")
+            return
+
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            self.send_error(500, "python-pptx not installed. Run: pip install python-pptx")
+            return
+        try:
+            data = build_template_ppt(profile, rows, template_path)
+        except Exception as exc:  # surface the real cause to the browser
+            self.send_error(500, f"Template build failed: {exc}")
+            return
+
+        fname = (str(profile.get("product") or "overview").replace("/", "_"))[:60]
+        disp_name = f"{fname}_完整模版.pptx"
+        # HTTP headers are latin-1; provide an ASCII fallback plus a UTF-8
+        # filename* (RFC 5987) so browsers get the proper Chinese name.
+        self.send_response(200)
+        self.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.presentationml.presentation")
+        self.send_header("Content-Disposition", f'attachment; filename="policy_overview_template.pptx"; filename*=UTF-8\'\'{quote(disp_name)}')
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
 
     def send_library_files(self, query):
         library = query.get("library", [""])[0]
