@@ -516,8 +516,9 @@ def start_periodic_pull(interval=60):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "4175"))
-    auto_pull()
-    start_periodic_pull(60)
-    server = ThreadingHTTPServer(("0.0.0.0", port), AppHandler)
+    if os.environ.get("AUTO_PULL") == "1":
+        auto_pull()
+        start_periodic_pull(60)
+    server = ThreadingHTTPServer(("127.0.0.1", port), AppHandler)
     print(f"AI 工作台 MVP 已启动：http://127.0.0.1:{port}")
     server.serve_forever()

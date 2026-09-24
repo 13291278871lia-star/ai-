@@ -101,53 +101,35 @@ def build_template_ppt(profile, rows, template_path):
     series=chart.series[0]; series.format.line.color.rgb=_rgb(BURG); series.format.line.width=Pt(2.5); series.marker.size=7
     _text(s,"退保价值包含非保证终期分红，IRR 并非保证回报。",.82,6.55,11.5,.3,10,BURG,True); _foot(s,source)
 
-    # 3 — milestone table
-    s=prs.slides[2]; _clear(s); _title(s,"VALUE MILESTONES","预期退保价值里程碑","保证价值与非保证终期分红分开呈现")
-    data=[["年末 / 年龄","保证金额","非保证分红","预期总额"]]
-    for y in milestones:
-        r=by[y]; data.append([f"{y}年 / {age+y}岁",f"USD {float(r.get('guaranteed') or 0):,.0f}",f"USD {float(r.get('bonus') or 0):,.0f}",f"USD {r['usd']:,.0f}"])
-    _table(s,data,.7,1.9,11.9,4.35,[2.1,2.8,3.2,3.2],14); _foot(s,source)
-
-    # 4 — legacy visual
-    s=prs.slides[3]; _clear(s)
-    if img1.exists(): s.shapes.add_picture(str(img1),Inches(6.1),Inches(0),width=Inches(7.23),height=Inches(7.5))
-    _box(s,0,0,6.55,7.5,WHITE,radius=False); _title(s,"LEGACY","跨代传承与身故保障")
-    _bullet(s,"首 10 个保单年度","基本保额的 100% 加终期分红的面值。",.65,2.0,5.1,.9)
-    _bullet(s,"第 10 年后","取“已缴整付保费”与“基本保额 × 适用百分比”之较高者，再加终期分红。",.65,3.1,5.1,1.05)
-    _bullet(s,"适用百分比","其后按计划书规则逐年下降，最终至基本保额的 50%。",.65,4.38,5.1,.9)
-    _text(s,"实际身故赔偿以保单条款及当时保单状态为准。",.7,5.65,5,.45,10,GREY); _foot(s,source)
-
-    # 5 — continuity
-    s=prs.slides[4]; _clear(s); _title(s,"POLICY CONTINUITY","保单延续与传承安排","计划书列明的保单管理选择")
-    items=[("第二持有人","让指定人士在原持有人身故后承接保单。"),("身故赔偿支付选择","可按计划条款安排支付方式。"),("受益人灵活选择","为不同家庭阶段预留调整空间。"),("保单分拆选择","符合条件时可按条款分拆保单。")]
-    for i,(a,b) in enumerate(items): _bullet(s,a,b,.75+(i%2)*6.05,2.0+(i//2)*1.55,5.55,1.15)
-    _foot(s,source)
-
-    # 6 — flexibility and visual
-    s=prs.slides[5]; _clear(s)
-    if img2.exists(): s.shapes.add_picture(str(img2),Inches(0),Inches(0),width=Inches(6.4),height=Inches(7.5))
-    _box(s,5.85,0,7.48,7.5,WHITE,radius=False); _title(s,"FLEXIBILITY","长期规划的弹性工具")
-    for i,(a,b) in enumerate([("健康障碍选择","在符合条款的情况下提供额外安排。"),("预先核保选择","受保人 60 岁或以下时，可按计划书所述条件使用。"),("保单贷款","可按当时保单价值及公司条款申请。"),("保单逆按揭计划","是否合资格及获批由相关机构决定。")]): _bullet(s,a,b,6.2,1.8+i*1.18,6.35,.92)
-    _foot(s,source)
-
-    # 7 — assumptions
-    s=prs.slides[6]; _clear(s); _title(s,"ASSUMPTIONS","本次演示的计算口径","只采用这份计划书的无提款基本说明")
-    facts=[("现金流",f"t=0 支出 USD {total_outlay:,.2f}；指定年末收回退保总额。"),("提款", "计划书没有提供中途提款方案，本简报未自行设计提款。"),("分红","终期分红属非保证，可能高于或低于演示数值。"),("汇率",f"人民币只按 {fx:g} 展示，不属于保单回报。"),("IRR","每个年期独立计算，不能把不同年期的退保价值相加。")]
-    for i,(a,b) in enumerate(facts): _bullet(s,a,b,.8,1.85+i*.95,11.7,.72)
-    _foot(s,source)
-
-    # 8–10 — unavailable template-specific scenarios, transparently handled
-    pages=[
-      ("WITHDRAWAL SCENARIO","提款情景","本计划书未提供提款金额、提款年龄或提款后价值，因此系统不自动填充。","如需要此页，请上传保险公司列明提款安排的同一产品计划书。"),
-      ("PROMOTION","推广与预缴优惠","本计划书没有现行推广期、回赠或预缴利率资料，因此系统不沿用模板旧数字。","推广资料需与产品、币种、保费及推广期逐项配对。"),
-      ("COMPARISON","方案比较","目前只有一个已核对方案，不能生成不选择预缴／预缴 1 年／预缴 4 年比较。","上传对应推广资料后，平台可按同一汇率与口径生成比较。")]
-    for idx,(kick,ttl,main,sub) in enumerate(pages,7):
-        s=prs.slides[idx]; _clear(s); _title(s,kick,ttl,"资料完整性检查")
-        _box(s,1.0,2.05,11.3,2.55,PALE,"D7C59D"); _text(s,"未从计划书提取",1.5,2.45,10.3,.55,25,BURG,True,PP_ALIGN.CENTER); _text(s,main,1.6,3.15,10.1,.6,14,INK,False,PP_ALIGN.CENTER); _text(s,sub,1.6,4.0,10.1,.35,10,GREY,False,PP_ALIGN.CENTER); _foot(s,source)
-
-    # 11 — source and cautions
-    s=prs.slides[10]; _clear(s); _title(s,"SOURCE CHECK","资料来源与重要提示","自动生成前已执行产品、币种与口径隔离")
-    checks=[("产品",product),("受保人",f"{name}，投保年龄 {age} 岁"),("保费",f"{'整付' if years==1 else str(years)+'年供款'} USD {premium:,.2f}；征费 USD {levy:,.2f}"),("提款假设","没有提款"),("非保证元素","终期分红及相关预期价值并非保证"),("风险","早期退保可能导致重大损失；人民币展示受汇率波动影响")]
-    _table(s,[["核对项目","本次生成采用的资料"]]+checks,.8,1.85,11.7,4.65,[2.6,9.1],12); _foot(s,source)
+    # 3–11 — keep the supplied template intact. Only replace fields that the
+    # uploaded proposal proves and that have a direct one-to-one placeholder.
+    # Withdrawal, promotion and payment figures are deliberately left untouched.
+    insured_label=name.replace(" ", "")
+    safe_replacements={
+        "XX岁先生/小姐": f"{age}岁{insured_label}",
+        "XX歲先生/小姐": f"{age}歲{insured_label}",
+        "XX岁 先生/小姐": f"{age}岁 {insured_label}",
+        "XX歲 先生/小姐": f"{age}歲 {insured_label}",
+        "（5年缴费）": "（整付保费）" if years==1 else f"（{years}年供款）",
+        "（5年繳費）": "（整付保費）" if years==1 else f"（{years}年供款）",
+    }
+    # Pages 3–6 contain client/scenario title placeholders. Pages 7–11 are
+    # promotion/payment templates and remain byte-for-byte visually unchanged.
+    for slide in list(prs.slides)[2:6]:
+        for shape in slide.shapes:
+            if not getattr(shape, "has_text_frame", False):
+                continue
+            original=shape.text
+            updated=original
+            for old,new in safe_replacements.items():
+                updated=updated.replace(old,new)
+            if updated != original:
+                # Assigning at run level preserves the template geometry and most styling.
+                for paragraph in shape.text_frame.paragraphs:
+                    for run in paragraph.runs:
+                        text=run.text
+                        for old,new in safe_replacements.items():
+                            text=text.replace(old,new)
+                        run.text=text
 
     bio=BytesIO(); prs.save(bio); return bio.getvalue()
