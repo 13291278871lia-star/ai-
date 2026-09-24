@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
 
 
-def build_template_ppt(profile, rows, template_path):
+def _legacy_build_template_ppt(profile, rows, template_path):
     """Open the user's GF template, fill slide-1 table/text and add a native
     editable line-chart slide. Returns the saved .pptx as bytes.
 
@@ -143,6 +143,9 @@ def build_template_ppt(profile, rows, template_path):
     return bio.getvalue()
 
 
+from ppt_full_builder import build_template_ppt
+
+
 def parse_proposal(file_bytes):
     """Parse an AIA proposal PDF server-side with pdfplumber.
 
@@ -169,6 +172,17 @@ def parse_proposal(file_bytes):
     m = re.search(r"年[齡龄][：:]\s*(\d+)", full_text)
     if m:
         meta["age"] = int(m.group(1))
+    m = re.search(r"受保人姓名[：:]\s*([^\n]+?)(?=\s+年[齡龄][：:])", full_text)
+    if m:
+        meta["insured"] = m.group(1).strip()[:40]
+    else:
+        m = re.search(r"([\u4e00-\u9fff]{2,8}(?:先生|女士|小姐))", full_text)
+        if m: meta["insured"] = m.group(1)
+    m = re.search(r"[「『][^\n]+?[」』]\s*人壽保險計劃\s*3\s+([\d,]+)\s+[\d,]+\.\d{2}\s+整付保費", full_text)
+    if not m:
+        m = re.search(r"投保時保額[^\n]*\n[^\n]*\n[^\n]*?([\d,]{5,})\s+[\d,]+\.\d{2}", full_text)
+    if m:
+        meta["sumAssured"] = float(m.group(1).replace(",", ""))
     m = re.search(r"([\d,]+\.\d{2})\s*整付保費", full_text)
     if m:
         meta["premium"] = float(m.group(1).replace(",", ""))

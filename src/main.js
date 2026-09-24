@@ -10,8 +10,6 @@ const modules = {
   ppt: { icon: "▣", title: "PPT 一鍵生成", subtitle: "生成可編輯演示文稿", color: "coral" },
   sop: { icon: "✓", title: "新人簽單 SOP", subtitle: "由入門到成交的學習路徑", color: "sage" },
   learning: { icon: "▶", title: "內部學習中心", subtitle: "課程影片與內部牌照研習資料", color: "plum" },
-  cases: { icon: "＋", title: "個案紀錄", subtitle: "簡單記錄跟進與下一步", color: "blue" },
-  workflow: { icon: "▦", title: "流程採集表", subtitle: "收集資深同事的簽單做法", color: "ink" },
   question: { icon: "?", title: "問題助手", subtitle: "整理日常工作思路", color: "violet" },
   practice: { icon: "◌", title: "話術訓練", subtitle: "模擬客戶，練習應對", color: "amber" },
   market: { icon: "◈", title: "市場資訊", subtitle: "同業產品與市場參考資料", color: "blue" },
@@ -669,22 +667,18 @@ const sopSteps = [
   ["入門準備", "認識團隊規範、持牌要求、平台及產品資料庫。", "完成公司指定培訓；了解可使用及不可使用的資料。"],
   ["客源開發", "建立合規的客源來源與首次聯絡節奏。", "選擇客源來源；準備首次聯絡話術；記錄聯絡結果。"],
   ["客戶輪廓", "用不含敏感資料的方式了解生活階段、家庭責任與關注。", "在「會前準備」填寫概括輪廓；列出三個要了解的問題。"],
-  ["需求分析", "了解客戶想解決的問題、保障缺口、預算與優先次序。", "完成個案紀錄的「需求及重點」；先確認需要，再談方案。"],
+  ["需求分析", "了解客戶想解決的問題、保障缺口、預算與優先次序。", "整理需求及重點；先確認需要，再談方案。"],
   ["方案準備", "以已批准資料整理可討論的方向，不預設成交。", "從資料庫選擇文件；用「見客助手」準備提問；按需要生成 PPT 草稿。"],
   ["首次見客", "建立信任、聆聽需要、總結理解並約定下一步。", "使用開場與提問框架；會後立即記錄客戶關注及下一步。"],
   ["跟進與異議", "針對客戶真正關心的問題進行清楚、可覆核的跟進。", "記錄異議；查閱正式資料；需要時與主管覆核；安排下次聯絡。"],
   ["申請與核保", "按公司正式流程準備申請資料及處理核保要求。", "以公司最新清單核對文件；不承諾核保結果；紀錄進度。"],
-  ["成交後服務", "完成保單交付、解釋後續服務及安排檢視。", "確認交付；設定年度檢視；在個案紀錄留下服務提醒。"],
+  ["成交後服務", "完成保單交付、解釋後續服務及安排檢視。", "確認交付；設定年度檢視；留下服務提醒。"],
   ["復盤成長", "把每個個案轉化為下一次更好的準備。", "完成個案復盤；標記需要主管協助的問題；練習相關話術。"],
 ];
 const sopShortcuts = {
   2: [["matching", "開啟會前準備"]],
   4: [["library", "開啟產品資料"], ["meeting", "開啟見客助手"], ["ppt", "開啟 PPT 一鍵生成"]],
-  5: [["cases", "更新個案紀錄"]],
-  6: [["cases", "更新個案紀錄"]],
-  7: [["cases", "更新個案紀錄"]],
-  8: [["cases", "更新個案紀錄"]],
-  9: [["cases", "更新個案紀錄"], ["practice", "開啟話術訓練"]],
+  9: [["practice", "開啟話術訓練"]],
 };
 
 function sop() {
@@ -720,35 +714,7 @@ const underwritingMaterials = [
 function learning() {
  const materials = ilasMaterials.map(([number, title, description, href, label]) => `<a class="learning-material" href="${encodeURI(href)}" target="_blank" rel="noreferrer"><span class="material-number">${number}</span><span class="material-file">▤</span><div><b>${title}</b><small>${description}</small></div><i>${label}</i><em>開啟 <strong>↗</strong></em></a>`).join("");
  const underwriting = underwritingMaterials.map(([number, title]) => { const href = `assets/training/underwriting/${title}`; return `<a class="learning-material" href="${encodeURI(href)}" target="_blank" rel="noreferrer"><span class="material-number">${number}</span><span class="material-file">▤</span><div><b>${title}</b><small>內部核保參考資料</small></div><em>開啟 <strong>↗</strong></em></a>`; }).join("");
- return appShell(`<section class="page learning-hero"><div><p class="eyebrow">內部學習中心 · ILAS</p><h1>把複雜知識，<br>學得更有次序。</h1><p>ILAS 內部課程與研習資料</p></div><div class="learning-hero-stats"><div><b>01</b><span>必修影片</span></div><div><b>02</b><span>研習資料</span></div><div><b>03</b><span>學習階段</span></div></div></section><section class="page learning-warning"><b>內部培訓材料</b><span>此區只供內部培訓及牌照研習使用，不可轉發客戶或第三方。產品狀態、版本及可對客使用資料，均須以公司最新正式批准文件為準。</span></section><section class="page learning-path"><span>01</span><div><b>觀看必修影片</b><small>先建立產品全貌</small></div><i>→</i><span>02</span><div><b>閱讀核心教材</b><small>掌握牌照與概念重點</small></div><i>→</i><span>03</span><div><b>用記憶卡溫習</b><small>準備下一輪學習</small></div></section><section class="page learning-layout"><div class="learning-course"><div class="course-top"><div><div class="course-label">STEP 01 · 必修課程</div><h2>課程影片</h2><p>先看影片了解內容結構，再進入下方研習資料。</p></div><span class="course-duration">影片學習</span></div><h3 class="course-product-title">投資相連壽險 ILAS｜AIA「兩全保」保障型投資相連壽險計劃（整付保費）</h3><video controls preload="metadata" class="course-video"><source src="assets/training/ilas/ilas-required-course.mov" type="video/quicktime">你的瀏覽器未能直接播放此影片。</video><a class="video-fallback" href="assets/training/ilas/ilas-required-course.mov" target="_blank" rel="noreferrer">未能播放？在新視窗開啟影片 ↗</a></div><div class="learning-list"><div class="learning-list-heading"><div><div class="panel-kicker">STEP 02–03 · 課程資料</div><h2>依次閱讀與溫習</h2></div><span>7 份資料</span></div>${materials}</div></section><section class="page learning-list underwriting-library"><div class="learning-list-heading"><div><div class="panel-kicker">補充資料 · 核保</div><h2>核保指引</h2><p>點選檔案可直接開啟。只供內部參考，實際申請請以公司當時正式流程及最新文件為準。</p></div><span>8 份資料</span></div>${underwriting}</section><section class="page learning-next"><b>完成後下一步</b><span>完成內部研習後，回到「新人簽單 SOP」了解何時使用資料庫、見客助手與個案紀錄；實際對客前，仍須以已批准的對客文件及主管指引為準。</span><button class="primary secondary" data-route="sop">返回新人簽單 SOP <span>→</span></button></section>`);
-}
-
-function getCases() {
- try { return JSON.parse(localStorage.getItem("aia-case-records") || "[]"); } catch { return []; }
-}
-function caseStatusLabel(status) { return status || "首次接觸"; }
-function cases() {
- const records = getCases();
- const rows = records.length ? records.map((record, index) => `<tr><td>${escapeHtml(record.alias)}</td><td>${escapeHtml(caseStatusLabel(record.status))}</td><td>${escapeHtml(record.focus)}</td><td>${escapeHtml(record.nextDate || "未設定")}</td><td><button class="text-button" data-delete-case="${index}">刪除</button></td></tr>`).join("") : `<tr><td colspan="5" class="no-records">尚未有紀錄。完成一次見客後，可在左側新增第一筆。</td></tr>`;
- return appShell(`<section class="page page-heading"><p class="eyebrow">個案紀錄</p><h1>只記錄重要資訊，<br>清楚安排下一步。</h1><p>請使用客戶代號，不要輸入姓名、身分證、電話、地址或任何敏感資料。</p></section><section class="page two-column case-layout"><form class="panel" id="caseForm"><h2>新增個案紀錄</h2>${textField("客戶代號／稱呼", "caseAlias", "例如：C-2026-001 或 年輕家庭 A", 1)}${formField("目前階段", "caseStatus", ["首次接觸", "需求分析", "已提案", "考慮中", "投保中", "已成交", "售後服務"])}${formField("主要關注", "caseFocus", ["醫療保障", "危疾保障", "家庭責任", "儲蓄／退休", "保單檢視", "其他"])}${formField("預算取向", "caseBudget", ["尚未討論", "先了解基本選項", "重視保障與預算平衡", "希望比較不同方案"])}${textField("本次重點／客戶問題", "caseNotes", "只記錄概括需要，例如：希望先理解家庭保障缺口", 3)}${textField("下一步行動", "caseNextAction", "例如：下周提供保障檢視摘要並約下次會面", 2)}<label class="field"><span>下次跟進日期</span><input id="caseNextDate" type="date"></label><button class="primary" type="submit">儲存個案紀錄 <span>→</span></button><p class="tiny">此 MVP 暫存於本機瀏覽器；正式團隊版需使用公司批准的資料儲存方式。</p></form><div class="panel case-record-panel"><div class="result-top"><h2>跟進清單</h2><span class="tag">${records.length} 筆</span></div><div class="table-wrap"><table><thead><tr><th>客戶代號</th><th>階段</th><th>主要關注</th><th>下次跟進</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div></section>`);
-}
-
-const workflowStages = [
-  ["客源與首次接觸", "你主要從哪裡接觸客戶？首次聯絡時如何開始？"],
-  ["客戶輪廓與需求分析", "你必問甚麼？如何判斷客戶真正需要？"],
-  ["方案準備與見客", "見客前會準備甚麼？會面如何安排？"],
-  ["跟進與處理顧慮", "通常何時跟進？如何處理常見顧慮？"],
-  ["申請 核保與成交交付", "申請前後要確認甚麼？如何完成交付？"],
-  ["復盤與可複製做法", "甚麼方法最有效？新人最容易忽略甚麼？"],
-];
-function getWorkflows() {
-  try { return JSON.parse(localStorage.getItem("aia-workflow-records") || "[]"); } catch { return []; }
-}
-function workflow() {
- const records = getWorkflows();
- const rows = records.length ? records.map((record, index) => `<tr><td>${escapeHtml(record.name)}</td><td>${escapeHtml(record.group || "未填寫")}</td><td>${escapeHtml(record.experience)}</td><td>${escapeHtml(record.date || "未設定")}</td><td><button class="text-button" data-delete-workflow="${index}">刪除</button></td></tr>`).join("") : `<tr><td colspan="5" class="no-records">尚未有流程紀錄。填寫完成後，會顯示在這裡。</td></tr>`;
- const fields = workflowStages.map(([title, prompt], index) => `<article class="workflow-step"><div class="workflow-number">${String(index + 1).padStart(2, "0")}</div><div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(prompt)}</p></div><label class="field"><span>我的實際做法</span><textarea id="workflow-do-${index}" rows="3" placeholder="請寫下具體步驟、判斷標準或常用做法"></textarea></label><label class="field"><span>使用工具或資料</span><textarea id="workflow-tools-${index}" rows="2" placeholder="例如：產品小冊子、個案紀錄、團隊話術、產品資料"></textarea></label><label class="field"><span>新手常見錯誤</span><textarea id="workflow-risks-${index}" rows="2" placeholder="請寫下容易遺漏的事項及避免方法"></textarea></label></article>`).join("");
- return appShell(`<section class="page page-heading"><p class="eyebrow">資深同事簽單流程採集</p><h1>把實際做法，<br>整理成可教的流程。</h1><p>請填寫你的做法，不需要輸入客戶姓名、電話、身分證或其他個人資料。</p></section><section class="page workflow-layout"><form id="workflowForm"><section class="panel workflow-profile"><div class="panel-kicker">填寫資料</div><div class="workflow-profile-grid"><label class="field"><span>填寫人或代號</span><input id="workflowName" required placeholder="例如：同事 A 或 A-001"></label><label class="field"><span>主要服務客群</span><input id="workflowGroup" placeholder="例如：年輕家庭、專業人士"></label><label class="field"><span>從業年資</span><select id="workflowExperience"><option>0 至 2 年</option><option>3 至 5 年</option><option>6 年或以上</option></select></label><label class="field"><span>填寫日期</span><input id="workflowDate" type="date"></label></div></section><section class="workflow-list">${fields}</section><section class="panel workflow-summary"><h2>整理重點</h2>${textField("最有效的三個工作習慣", "workflowHabits", "例如：先確認需求；會後 24 小時內跟進；每次保留下一步", 3)}${textField("希望 AI 平台優先協助甚麼", "workflowAi", "例如：產品資料搜尋、見客準備、話術演練、個案紀錄", 2)}${textField("如果只教新人一件事，你會教甚麼？", "workflowLesson", "請寫下一句最想提醒新人的話", 2)}<button class="primary" type="submit">儲存流程紀錄 <span>→</span></button><p class="tiny">此 MVP 暫存於目前瀏覽器。正式團隊版需使用公司批准的資料儲存方式。</p></section></form><section class="panel workflow-record-panel"><div class="result-top"><h2>已儲存紀錄</h2><span class="tag">${records.length} 筆</span></div><div class="table-wrap"><table><thead><tr><th>填寫人</th><th>服務客群</th><th>年資</th><th>日期</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></section></section>`);
+ return appShell(`<section class="page learning-hero"><div><p class="eyebrow">內部學習中心 · ILAS</p><h1>把複雜知識，<br>學得更有次序。</h1><p>ILAS 內部課程與研習資料</p></div><div class="learning-hero-stats"><div><b>01</b><span>必修影片</span></div><div><b>02</b><span>研習資料</span></div><div><b>03</b><span>學習階段</span></div></div></section><section class="page learning-warning"><b>內部培訓材料</b><span>此區只供內部培訓及牌照研習使用，不可轉發客戶或第三方。產品狀態、版本及可對客使用資料，均須以公司最新正式批准文件為準。</span></section><section class="page learning-path"><span>01</span><div><b>觀看必修影片</b><small>先建立產品全貌</small></div><i>→</i><span>02</span><div><b>閱讀核心教材</b><small>掌握牌照與概念重點</small></div><i>→</i><span>03</span><div><b>用記憶卡溫習</b><small>準備下一輪學習</small></div></section><section class="page learning-layout"><div class="learning-course"><div class="course-top"><div><div class="course-label">STEP 01 · 必修課程</div><h2>課程影片</h2><p>先看影片了解內容結構，再進入下方研習資料。</p></div><span class="course-duration">影片學習</span></div><h3 class="course-product-title">投資相連壽險 ILAS｜AIA「兩全保」保障型投資相連壽險計劃（整付保費）</h3><video controls preload="metadata" class="course-video"><source src="assets/training/ilas/ilas-required-course.mov" type="video/quicktime">你的瀏覽器未能直接播放此影片。</video><a class="video-fallback" href="assets/training/ilas/ilas-required-course.mov" target="_blank" rel="noreferrer">未能播放？在新視窗開啟影片 ↗</a></div><div class="learning-list"><div class="learning-list-heading"><div><div class="panel-kicker">STEP 02–03 · 課程資料</div><h2>依次閱讀與溫習</h2></div><span>7 份資料</span></div>${materials}</div></section><section class="page learning-list underwriting-library"><div class="learning-list-heading"><div><div class="panel-kicker">補充資料 · 核保</div><h2>核保指引</h2><p>點選檔案可直接開啟。只供內部參考，實際申請請以公司當時正式流程及最新文件為準。</p></div><span>8 份資料</span></div>${underwriting}</section><section class="page learning-next"><b>完成後下一步</b><span>完成內部研習後，回到「新人簽單 SOP」了解何時使用資料庫與見客助手；實際對客前，仍須以已批准的對客文件及主管指引為準。</span><button class="primary secondary" data-route="sop">返回新人簽單 SOP <span>→</span></button></section>`);
 }
 
 function ppt() { return appShell(insurancePanel()+`<section class="page panel"><details><summary>通用演示大綱（保留原功能）</summary>${textField("主題", "pptTopic", "例如：家庭保障規劃入門", 2)}${formField("頁數", "pptSlides", ["5 頁精簡版", "7 頁標準版", "10 頁詳細版"])}<button class="primary" id="generatePpt">生成 PPT 大綱 ✦</button><div id="pptOutput"></div></details></section>`); }
@@ -795,47 +761,6 @@ function bindPage() {
    localStorage.removeItem("aia-sop-completed");
    render();
  });
- document.querySelector("#caseForm")?.addEventListener("submit", (event) => {
-   event.preventDefault();
-   const alias = document.querySelector("#caseAlias").value.trim();
-   if (!alias) { document.querySelector("#caseAlias").focus(); return; }
-   const record = {
-     alias,
-     status: document.querySelector("#caseStatus").value,
-     focus: document.querySelector("#caseFocus").value,
-     budget: document.querySelector("#caseBudget").value,
-     notes: document.querySelector("#caseNotes").value.trim(),
-     nextAction: document.querySelector("#caseNextAction").value.trim(),
-     nextDate: document.querySelector("#caseNextDate").value,
-     createdAt: new Date().toISOString(),
-   };
-   localStorage.setItem("aia-case-records", JSON.stringify([record, ...getCases()]));
-   render();
- });
- document.querySelectorAll("[data-delete-case]").forEach((button) => button.addEventListener("click", () => {
-   const records = getCases();
-   records.splice(Number(button.dataset.deleteCase), 1);
-   localStorage.setItem("aia-case-records", JSON.stringify(records));
-   render();
- }));
- document.querySelector("#workflowForm")?.addEventListener("submit", (event) => {
-   event.preventDefault();
-   const name = document.querySelector("#workflowName").value.trim();
-   if (!name) { document.querySelector("#workflowName").focus(); return; }
-   const stages = workflowStages.map((_, index) => ({
-     title: workflowStages[index][0],
-     doing: document.querySelector(`#workflow-do-${index}`).value.trim(),
-     tools: document.querySelector(`#workflow-tools-${index}`).value.trim(),
-     risks: document.querySelector(`#workflow-risks-${index}`).value.trim(),
-   }));
-   const record = { name, group: document.querySelector("#workflowGroup").value.trim(), experience: document.querySelector("#workflowExperience").value, date: document.querySelector("#workflowDate").value, stages, habits: document.querySelector("#workflowHabits").value.trim(), ai: document.querySelector("#workflowAi").value.trim(), lesson: document.querySelector("#workflowLesson").value.trim(), createdAt: new Date().toISOString() };
-   localStorage.setItem("aia-workflow-records", JSON.stringify([record, ...getWorkflows()]));
-   render();
- });
- document.querySelectorAll("[data-delete-workflow]").forEach((button) => button.addEventListener("click", () => {
-   const records = getWorkflows(); records.splice(Number(button.dataset.deleteWorkflow), 1);
-   localStorage.setItem("aia-workflow-records", JSON.stringify(records)); render();
- }));
  document.querySelectorAll("[data-library-category]").forEach((button) => button.addEventListener("click", () => {
    selectedLibraryCategory = button.dataset.libraryCategory;
    render();
