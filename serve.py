@@ -472,8 +472,38 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
 
+def auto_pull():
+    """启动时从 GitHub 拉取最新代码，确保工作平台始终是最新版本。"""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["git", "pull", "--ff-only", "origin", "main"],
+            capture_output=True, text=True, timeout=15, cwd=os.path.dirname(os.path.abspath(__file__))
+        )
+        if result.returncode == 0:
+            print(f"[auto-pull] 已检查更新: {result.stdout.strip() or '已是最新'}")
+        else:
+            print(f"[auto-pull] 拉取跳过: {result.stderr.strip()[:80]}")
+    except Exception as e:
+        print(f"[auto-pull] 跳过（{e}）")
+
+
+def start_periodic_pull(interval=60):
+    """后台线程每 interval 秒拉取一次最新代码。"""
+    import threading
+    def loop():
+        import time
+        while True:
+            time.sleep(interval)
+            auto_pull()
+    t = threading.Thread(target=loop, daemon=True)
+    t.start()
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "4175"))
-    server = ThreadingHTTPServer(("127.0.0.1", port), AppHandler)
+    auto_pull()
+    start_periodic_pull(60)
+    server = ThreadingHTTPServer(("0.0.0.0", port), AppHandler)
     print(f"AI 工作台 MVP 已启动：http://127.0.0.1:{port}")
     server.serve_forever()
