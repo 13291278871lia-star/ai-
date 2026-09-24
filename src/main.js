@@ -1,6 +1,8 @@
 import {panel as insurancePanel, bind as bindInsurance} from './insurance-ppt.js';
+import {panel as salesToolPanel, bind as bindSalesTool} from './sales-tool-legacy.js';
 import {compareSchema} from './compare-schema.js';
 const modules = {
+  salestool: { icon: "✦", title: "傳承銷售工具", subtitle: "上傳計劃書，生成個案PPT", color: "gold" },
   matching: { icon: "◇", title: "會前準備", subtitle: "由客戶輪廓尋找已批准資料", color: "gold" },
   library: { icon: "▤", title: "產品資料", subtitle: "按產品類別查閱已批准資料", color: "wine" },
   compare: { icon: "⇄", title: "產品對比", subtitle: "選擇產品，清楚比較已提供資料", color: "teal" },
@@ -430,7 +432,7 @@ function appShell(content) {
   return `<div class="app-shell">
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">A</div><div><strong>AI 工作台</strong><small>内部 MVP · 演示版</small></div></div>
-      <nav>${navItem("home", "⌂", "首頁")}${navGroup("library", ["promotion", "market", "discontinued"])}${navItem("compare", "⇄", "產品對比")}${navGroup("meeting", ["matching", "question", "practice"])}${navItem("sop", "✓", "新人簽單 SOP")}${navItem("learning", "▶", "內部學習中心")}${navItem("cases", "＋", "個案紀錄")}${navItem("workflow", "▦", "流程採集表")}${navItem("ppt", "▣", "PPT 一鍵生成")}</nav>
+      <nav>${navItem("home", "⌂", "首頁")}${navItem("salestool", "✦", "傳承銷售工具")}${navGroup("library", ["promotion", "market", "discontinued"])}${navItem("compare", "⇄", "產品對比")}${navGroup("meeting", ["matching", "question", "practice"])}${navItem("sop", "✓", "新人簽單 SOP")}${navItem("learning", "▶", "內部學習中心")}${navItem("cases", "＋", "個案紀錄")}${navItem("workflow", "▦", "流程採集表")}${navItem("ppt", "▣", "PPT 一鍵生成")}</nav>
       <div class="sidebar-footer"><span class="status-dot"></span>示範模式<br><small>請勿輸入客戶個人資料</small></div>
     </aside>
     <main class="main"><header class="topbar"><button id="menuButton" class="menu-button">☰</button><div class="notice">此為內部示範版 · 所有輸出均須人工覆核後使用</div><div class="theme-preview" style="display:flex" role="group" aria-label="配色預覽"><span class="theme-label">配色</span><button title="原始紅色系" class="theme-choice ${uiTheme === "classic-red" ? "active" : ""}" data-theme-choice="classic-red">經典紅</button><button title="經典藏藍－啞光金" class="theme-choice ${uiTheme === "navy-gold" ? "active" : ""}" data-theme-choice="navy-gold">藏藍金</button><button title="炭灰黑－暗酒紅－香檳金" class="theme-choice ${uiTheme === "guardian" ? "active" : ""}" data-theme-choice="guardian">炭灰紅</button><button title="現代 Slate 灰藍" class="theme-choice ${uiTheme === "slate" ? "active" : ""}" data-theme-choice="slate">Slate</button><button title="深色模式－黑金尊享" class="theme-choice ${uiTheme === "black-gold" ? "active" : ""}" data-theme-choice="black-gold">黑金</button></div><div class="avatar">演</div></header>${sectionNavigation()}${content}</main>
@@ -750,6 +752,7 @@ function workflow() {
 }
 
 function ppt() { return appShell(insurancePanel()+`<section class="page panel"><details><summary>通用演示大綱（保留原功能）</summary>${textField("主題", "pptTopic", "例如：家庭保障規劃入門", 2)}${formField("頁數", "pptSlides", ["5 頁精簡版", "7 頁標準版", "10 頁詳細版"])}<button class="primary" id="generatePpt">生成 PPT 大綱 ✦</button><div id="pptOutput"></div></details></section>`); }
+function salestool() { return appShell(salesToolPanel()); }
 
 function question() {
  return appShell(`<section class="page page-heading"><p class="eyebrow">問題助手</p><h1>把問題變成下一步行動</h1><p>適合整理工作思路、草擬文案和拆分任務。</p></section><section class="page single"><div class="panel"><h2>你想解決什麼問題？</h2>${textField("問題描述", "userQuestion", "例如：怎樣為新人安排一場 30 分鐘的產品培訓？", 5)}<div class="quick-prompts"><button data-question="幫我擬一封會議後的跟進電郵">跟進電郵</button><button data-question="幫我把一個複雜工作任務拆成行動步驟">拆分任務</button><button data-question="幫我整理一場培訓的議程">培訓議程</button></div><button class="primary" id="askQuestion">整理建議 ✦</button></div><div class="panel answer-box" id="questionOutput"><div class="empty-state"><div>?</div><h3>從一個問題開始</h3><p>輸出僅作工作草稿；涉及條款、監管或客戶決定，請查閱正式文件並諮詢主管。</p></div></div></section>`);
@@ -761,7 +764,7 @@ function practice() {
 
 function render() {
  document.documentElement.dataset.theme = getUiTheme();
- const page = { home, matching, library, compare, market, promotion, discontinued, meeting, sop, learning, cases, workflow, ppt, question, practice }[currentModule]();
+ const page = { home, salestool, matching, library, compare, market, promotion, discontinued, meeting, sop, learning, cases, workflow, ppt, question, practice }[currentModule]();
  document.querySelector("#app").innerHTML = page;
  document.querySelectorAll("[data-route]").forEach(el => el.addEventListener("click", () => { currentModule = el.dataset.route; render(); }));
  document.querySelectorAll("[data-theme-choice]").forEach((button) => button.addEventListener("click", () => {
@@ -774,6 +777,7 @@ function render() {
 
 function bindPage() {
  bindInsurance();
+ bindSalesTool();
  document.querySelector("#generateMeeting")?.addEventListener("click", generateMeeting);
  document.querySelector("#matchPolicies")?.addEventListener("click", matchPolicies);
  document.querySelector("#generatePpt")?.addEventListener("click", generatePptOutline);
