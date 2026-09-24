@@ -430,7 +430,7 @@ function appShell(content) {
   return `<div class="app-shell">
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">A</div><div><strong>AI 工作台</strong><small>内部 MVP · 演示版</small></div></div>
-      <nav>${navItem("home", "⌂", "首頁")}${navItem("salestool", "✦", "傳承銷售工具")}${navGroup("library", ["promotion", "market", "discontinued"])}${navItem("compare", "⇄", "產品對比")}${navGroup("meeting", ["matching", "question", "practice"])}${navItem("sop", "✓", "新人簽單 SOP")}${navItem("learning", "▶", "內部學習中心")}${navItem("cases", "＋", "個案紀錄")}${navItem("workflow", "▦", "流程採集表")}${navItem("ppt", "▣", "PPT 一鍵生成")}</nav>
+      <nav>${navItem("home", "⌂", "首頁")}${navItem("salestool", "✦", "傳承銷售工具")}${navGroup("library", ["promotion", "market", "discontinued"])}${navItem("compare", "⇄", "產品對比")}${navGroup("meeting", ["matching", "question", "practice"])}${navItem("sop", "✓", "新人簽單 SOP")}${navItem("learning", "▶", "內部學習中心")}${navItem("ppt", "▣", "PPT 一鍵生成")}</nav>
       <div class="sidebar-footer"><span class="status-dot"></span>示範模式<br><small>請勿輸入客戶個人資料</small></div>
     </aside>
     <main class="main"><header class="topbar"><button id="menuButton" class="menu-button">☰</button><div class="notice">此為內部示範版 · 所有輸出均須人工覆核後使用</div><div class="theme-preview" style="display:flex" role="group" aria-label="配色預覽"><span class="theme-label">配色</span><button title="原始紅色系" class="theme-choice ${uiTheme === "classic-red" ? "active" : ""}" data-theme-choice="classic-red">經典紅</button><button title="經典藏藍－啞光金" class="theme-choice ${uiTheme === "navy-gold" ? "active" : ""}" data-theme-choice="navy-gold">藏藍金</button><button title="炭灰黑－暗酒紅－香檳金" class="theme-choice ${uiTheme === "guardian" ? "active" : ""}" data-theme-choice="guardian">炭灰紅</button><button title="現代 Slate 灰藍" class="theme-choice ${uiTheme === "slate" ? "active" : ""}" data-theme-choice="slate">Slate</button><button title="深色模式－黑金尊享" class="theme-choice ${uiTheme === "black-gold" ? "active" : ""}" data-theme-choice="black-gold">黑金</button></div><div class="avatar">演</div></header>${sectionNavigation()}${content}</main>
@@ -730,7 +730,7 @@ function practice() {
 
 function render() {
  document.documentElement.dataset.theme = getUiTheme();
- const page = { home, salestool, matching, library, compare, market, promotion, discontinued, meeting, sop, learning, cases, workflow, ppt, question, practice }[currentModule]();
+ const page = { home, salestool, matching, library, compare, market, promotion, discontinued, meeting, sop, learning, ppt, question, practice }[currentModule]();
  document.querySelector("#app").innerHTML = page;
  document.querySelectorAll("[data-route]").forEach(el => el.addEventListener("click", () => { currentModule = el.dataset.route; render(); }));
  document.querySelectorAll("[data-theme-choice]").forEach((button) => button.addEventListener("click", () => {
