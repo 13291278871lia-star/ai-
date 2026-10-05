@@ -38,10 +38,13 @@ export function bindUpload({apply,clear,get,render}){
     if(resp.ok){
      const data=await resp.json();const p=data.profile||{};
      if(data.known&&p.product&&p.age&&p.premium){
-      apply({product:p.product,age:p.age,premium:p.premium,years:p.years||1,levy:p.levy??0,fx:p.fx||6.8,source:`${file.name} · 後端自動解析（${data.rowCount}個年度）`,rows:data.rows});
-      status(`✅ 已自動辨識 AIA 計劃書，套用 ${data.rowCount} 個年度數據。正在下載完整模版 PPT…`);
-      setTimeout(()=>{const btn=document.querySelector('#downloadInsurance');if(btn&&!btn.disabled){btn.click();}else{status(`已套用數據，請按右側「下載完整模版 PPT」按鈕。`);}},700);
-      host.querySelector('#insUploadMapping').innerHTML=`<p class="tiny">已自動套用後端解析結果（${data.rowCount}年）。如需手動調整，<button type="button" class="text-button" id="switchManualMap">改用瀏覽器手動對應</button>。</p>`;
+      const w=data.withdrawalPlan;
+      apply({product:p.product,age:p.age,premium:p.premium,years:p.years||1,levy:p.levy??0,fx:p.fx||6.8,source:`${file.name} · 後端自動解析（${data.rowCount}個年度）`,rows:data.rows,proposal:data});
+      status([`✅ 已自動辨識 AIA 計劃書，套用 ${data.rowCount} 個年度數據。`,
+       w?`識別到提取方案：${w.startAge}–${w.endAge}歲每年 ${Number(w.annual).toLocaleString('en-US')} ×${w.count}年${w.residual?`，${w.residualAge}歲剩餘 ${Number(w.residual).toLocaleString('en-US')}`:''}（建議書第${(w.page||[]).join('、')}頁）。`:'計劃書沒有「現金提取舉例」，第2頁提取概覽會自動省略。',
+       '正在下載7頁概覽 PPT…'].join('\n'));
+      setTimeout(()=>{const btn=document.querySelector('#downloadInsurance');if(btn&&!btn.disabled){btn.click();}else{status(`已套用數據，請按右側「下載7頁概覽 PPT」按鈕。`);}},700);
+      host.querySelector('#insUploadMapping').innerHTML=`<p class="tiny">已自動套用後端解析結果（${data.rowCount}年）。優惠與推廣數字計劃書沒有，請在左側「優惠與推廣參數」按當期小冊子補齊，否則第3–6頁會保留模版佔位符。如需手動調整，<button type="button" class="text-button" id="switchManualMap">改用瀏覽器手動對應</button>。</p>`;
       host.querySelector('#switchManualMap').onclick=()=>{status('改用手動對應，請稍候…');manualRead(file,current);};
       return;
      }

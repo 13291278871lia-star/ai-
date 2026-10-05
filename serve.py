@@ -9,235 +9,36 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
 
 
-def _legacy_build_template_ppt(profile, rows, template_path):
-    """Open the user's GF template, fill slide-1 table/text and add a native
-    editable line-chart slide. Returns the saved .pptx as bytes.
-
-    pptxgenjs (used client-side) can only *generate* a fresh deck; it cannot
-    open an existing .pptx. Filling the real 11-page template therefore has to
-    happen server-side with python-pptx, which is why this lives here.
-    """
-    from io import BytesIO
-    from pptx import Presentation
-    from pptx.util import Pt, Inches
-    from pptx.chart.data import CategoryChartData
-    from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
-    from pptx.enum.text import PP_ALIGN
-
-    fx = float(profile.get("fx", 6.8) or 6.8)
-    premium = float(profile.get("premium", 0) or 0)
-    years = int(profile.get("years", 1) or 1)
-    product = str(profile.get("product", "") or "")
-    source = str(profile.get("source", "") or "")
-    age = profile.get("age", "")
-    pay_term = "整付保費" if years == 1 else f"{years}年"
-
-    prs = Presentation(str(template_path))
-    slide0 = prs.slides[0]
-
-    def set_textbox(shape, lines):
-        tf = shape.text_frame
-        for p in list(tf.paragraphs)[1:]:
-            p._p.getparent().remove(p._p)
-        first = tf.paragraphs[0]
-        for i, line in enumerate(lines):
-            if i == 0:
-                first.text = line
-            else:
-                tf.add_paragraph().text = line
-
-    by_year = {int(r["year"]): r for r in rows if "year" in r}
-
-    # --- fill slide-1 text placeholders (matched by shape name) ---
-    for shape in slide0.shapes:
-        if not shape.has_text_frame:
-            continue
-        nm = shape.name
-        if nm == "文字方塊 4":  # main title
-            set_textbox(shape, [f"香港友邦保险 - {product}"])
-        elif nm == "文字方塊 6":  # 目标 / 优点
-            set_textbox(shape, [
-                "目标：终身分红保障，财富传承与灵活现金提取并重",
-                "优点：整付保费锁定价值，享终期分红非保证收益",
-            ])
-        elif nm == "文字方塊 8":  # 供款额 / 存款期 / 总供款
-            set_textbox(shape, [
-                f"供款额：{premium:,.0f} 美元 ({premium * fx:,.0f} 人民币)",
-                f"存款期：{pay_term}    总供款：{premium * years:,.0f} 美元 ({premium * years * fx:,.0f} 人民币)",
-            ])
-
-    # --- fill slide-1 summary table (表格 1): 20/30/40/50年后 ---
-    for shape in slide0.shapes:
-        if shape.has_table and shape.name == "表格 1":
-            tbl = shape.table
-            for ri, yr in enumerate((20, 30, 40, 50), start=1):
-                r = by_year.get(yr)
-                if not r:
-                    continue
-                usd = float(r.get("usd", 0) or 0)
-                rmb = float(r.get("rmb", usd * fx) or usd * fx)
-                rate = float(r.get("rate", 0) or 0)
-                tbl.cell(ri, 0).text = f"{yr}年后"
-                tbl.cell(ri, 1).text = f"{usd:,.0f}"
-                tbl.cell(ri, 2).text = f"{rmb:,.0f}"
-                tbl.cell(ri, 3).text = f"{rate * 100:.2f}%"
-                for c in range(4):
-                    for p in tbl.cell(ri, c).text_frame.paragraphs:
-                        p.alignment = PP_ALIGN.CENTER
-                        for run in p.runs:
-                            run.font.size = Pt(14)
-                            run.font.bold = True
-            break
-
-    # --- add a native, editable line-chart slide (value growth) ---
-    sorted_rows = sorted(rows, key=lambda r: r["year"])
-    chart_data = CategoryChartData()
-    chart_data.categories = [f"第{int(r['year'])}年" for r in sorted_rows]
-    has_split = any(r.get("guaranteed") is not None for r in sorted_rows)
-    if has_split:
-        chart_data.add_series("保证金额", [float(r.get("guaranteed") or 0) for r in sorted_rows])
-        chart_data.add_series("非保证分红", [float(r.get("bonus") or 0) for r in sorted_rows])
-    chart_data.add_series("退保总额", [float(r.get("usd", 0) or 0) for r in sorted_rows])
-
-    blank = None
-    for layout in prs.slide_layouts:
-        if "blank" in layout.name.lower() or "空白" in layout.name:
-            blank = layout
-            break
-    chart_slide = prs.slides.add_slide(blank or prs.slide_layouts[6])
-
-    title = f"{product} — 预期退保价值增长（{premium:,.0f}美元{pay_term}）"
-    tx = chart_slide.shapes.add_textbox(Inches(0.4), Inches(0.2), Inches(12.5), Inches(0.8))
-    tx.text_frame.word_wrap = True
-    tp = tx.text_frame.paragraphs[0]
-    tp.text = title
-    tp.font.size = Pt(22)
-    tp.font.bold = True
-
-    chart_shape = chart_slide.shapes.add_chart(
-        XL_CHART_TYPE.LINE, Inches(0.4), Inches(1.1), Inches(12.5), Inches(5.8), chart_data
-    )
-    chart = chart_shape.chart
-    chart.has_title = True
-    chart.chart_title.text_frame.paragraphs[0].text = "预期退保价值增长曲线（美元）"
-    chart.chart_title.text_frame.paragraphs[0].font.size = Pt(16)
-    chart.has_legend = True
-    chart.legend.position = XL_LEGEND_POSITION.BOTTOM
-    chart.legend.include_in_layout = False
-    chart.plots[0].has_data_labels = False
-    chart.value_axis.tick_labels.number_format = "#,##0"
-    chart.value_axis.tick_labels.font.size = Pt(9)
-    chart.value_axis.has_title = True
-    chart.value_axis.axis_title.text_frame.paragraphs[0].text = "金额 (美元)"
-    chart.value_axis.axis_title.text_frame.paragraphs[0].font.size = Pt(10)
-    chart.category_axis.tick_labels.font.size = Pt(8)
-
-    foot = chart_slide.shapes.add_textbox(Inches(0.4), Inches(7.0), Inches(12.5), Inches(0.4))
-    fp = foot.text_frame.paragraphs[0]
-    fp.text = f"*以美元兑人民币{fx}计算*  以上数据只供参考, 详情请参阅建议书。来源：{source}"
-    fp.font.size = Pt(9)
-    fp.font.italic = True
-
-    bio = BytesIO()
-    prs.save(bio)
-    return bio.getvalue()
+import irr_model
+import proposal_parse
+from proposal_parse import parse_proposal
 
 
-from ppt_full_builder import build_template_ppt
-
-
-def parse_proposal(file_bytes):
-    """Parse an AIA proposal PDF server-side with pdfplumber.
-
-    The in-browser pdfjs path recognises only an 8-column "known" layout that
-    no real AIA proposal matches (the real 詳細說明 table is 9 columns with
-    age and policy year split, and each pdfplumber cell is newline-packed
-    with ~5 years). This function splits those packed cells back into yearly
-    rows, auto-maps the AIA 9-column layout (year=1, guaranteed=3, bonus=4,
-    total=5), validates total ≈ guaranteed + bonus, and extracts proposal
-    metadata (product / age / premium / levy / currency). Returns
-    {known, profile, rows:[[year, guaranteed, bonus], ...], rowCount,
-    warnings}. On non-AIA or unrecognised PDFs known=false so the browser
-    falls back to the in-browser manual mapping path.
-    """
-    import io as _io
-    import pdfplumber
-
-    pdf = pdfplumber.open(_io.BytesIO(file_bytes))
-    full_text = "\n".join((p.extract_text() or "") for p in pdf.pages)
-    meta = {}
-    m = re.search(r"計劃[：:]\s*(.+)", full_text)
-    if m:
-        meta["product"] = m.group(1).strip().split("\n")[0].strip()[:70]
-    m = re.search(r"年[齡龄][：:]\s*(\d+)", full_text)
-    if m:
-        meta["age"] = int(m.group(1))
-    m = re.search(r"受保人姓名[：:]\s*([^\n]+?)(?=\s+年[齡龄][：:])", full_text)
-    if m:
-        meta["insured"] = m.group(1).strip()[:40]
-    else:
-        m = re.search(r"([\u4e00-\u9fff]{2,8}(?:先生|女士|小姐))", full_text)
-        if m: meta["insured"] = m.group(1)
-    m = re.search(r"[「『][^\n]+?[」』]\s*人壽保險計劃\s*3\s+([\d,]+)\s+[\d,]+\.\d{2}\s+整付保費", full_text)
-    if not m:
-        m = re.search(r"投保時保額[^\n]*\n[^\n]*\n[^\n]*?([\d,]{5,})\s+[\d,]+\.\d{2}", full_text)
-    if m:
-        meta["sumAssured"] = float(m.group(1).replace(",", ""))
-    m = re.search(r"([\d,]+\.\d{2})\s*整付保費", full_text)
-    if m:
-        meta["premium"] = float(m.group(1).replace(",", ""))
-        meta["years"] = 1
-    else:
-        m = re.search(r"年[繳缴]保[費费][^\d]*([\d,]+\.\d{2})", full_text)
-        if m:
-            meta["premium"] = float(m.group(1).replace(",", ""))
-            m2 = re.search(r"供款年期[：:]\s*(\d+)\s*年", full_text)
-            meta["years"] = int(m2.group(1)) if m2 else 1
-    m = re.search(r"保費徵費\s*([\d,]+\.\d{2})", full_text)
-    meta["levy"] = float(m.group(1).replace(",", "")) if m else 0
-    m = re.search(r"保[單单][貨货][幣币][：:]\s*(\S+)", full_text)
-    meta["currency"] = (m.group(1) if m else "美元").strip()
-    meta["fx"] = 6.8
-
-    raw = []
-    for page in pdf.pages:
-        for tbl in page.extract_tables():
-            if not tbl or not tbl[0] or len(tbl[0]) < 6:
-                continue
-            for row in tbl:
-                cells = [(c or "") for c in row]
-                parts = [c.split("\n") for c in cells]
-                n = max((len(p) for p in parts), default=0)
-                for k in range(n):
-                    vals = [parts[ci][k] if k < len(parts[ci]) else "" for ci in range(len(cells))]
-                    vals = [v.replace(",", "").strip() for v in vals]
-                    if len(vals) < 6 or not vals[0].isdigit() or not vals[1].isdigit():
-                        continue
-                    try:
-                        year = int(vals[1])
-                        guar = float(vals[3]) if vals[3] else 0
-                        bonus = float(vals[4]) if vals[4] else 0
-                        total = float(vals[5]) if vals[5] else (guar + bonus)
-                    except (ValueError, IndexError):
-                        continue
-                    if year < 1 or year > 120:
-                        continue
-                    raw.append((year, guar, bonus, total))
-
-    by_year = {}
-    for y, g, b, t in raw:
-        by_year[y] = (y, g, b, t)
-    out = sorted(by_year.values(), key=lambda x: x[0])
-    valid = sum(1 for (y, g, b, t) in out if abs(t - (g + b)) <= max(2, t * 0.001))
-    mapping_ok = len(out) >= 5 and valid >= len(out) * 0.8
-    known = bool(mapping_ok and meta.get("premium") and meta.get("age") and meta.get("product"))
-    rows_json = [[y, g, b] for (y, g, b, t) in out]
-    warnings = []
-    if not known:
-        warnings.append("未辨識為標準 AIA 詳細說明表格" if not mapping_ok else "缺少產品/年齡/保費資訊")
-    if meta.get("currency") and meta["currency"] not in ("美元", "USD", "美金"):
-        warnings.append(f"保單貨幣為 {meta['currency']}，本工具僅支援美元")
-    return {"known": known, "profile": meta, "rows": rows_json, "rowCount": len(rows_json), "warnings": warnings}
+def default_cfg(parsed, overrides=None):
+    """Map a parsed proposal onto the config the deck/IRR model expects."""
+    p = dict(parsed.get("profile") or {})
+    cfg = {
+        "product": p.get("product"),
+        "insured": p.get("insured"),
+        "gender": p.get("gender"),
+        "age": p.get("age"),
+        "years": p.get("years"),
+        "premium": p.get("premium"),
+        "levy": p.get("levy") or 0.0,
+        "fx": p.get("fx") or 6.8,
+        "endAge": 100,
+        "irrCap": p.get("irrCap") or irr_model.DEFAULT_IRR_CAP,
+        "includeLevy": irr_model.DEFAULT_INCLUDE_LEVY,
+        "showYears": [20, 30, 40, 50],
+        "detail": parsed.get("detail") or {},
+        "withdrawal": parsed.get("withdrawalPlan"),
+        "promo": {},
+        "insuredTitle": None,
+        "target": None,
+        "advantage": None,
+    }
+    cfg.update(overrides or {})
+    return cfg
 
 
 class AppHandler(SimpleHTTPRequestHandler):
@@ -269,72 +70,193 @@ class AppHandler(SimpleHTTPRequestHandler):
         if request.path == "/api/parse-proposal":
             self.send_parsed_proposal()
             return
+        if request.path == "/api/verify-irr":
+            self.send_irr_verification()
+            return
         self.send_error(404, "Not found")
 
-    def send_template_ppt(self):
-        """Fill the user's GF template (server-side, python-pptx) and return a
-        full editable .pptx with the summary table filled and a native
-        line-chart slide added. The browser cannot do this with pptxgenjs
-        because that library can only build a deck from scratch, not open an
-        existing template."""
+    def _read_json(self, limit):
         length = int(self.headers.get("Content-Length", 0) or 0)
-        if length <= 0 or length > 2_000_000:
+        if length <= 0 or length > limit:
             self.send_error(400, "Invalid request size")
-            return
+            return None
         raw = self.rfile.read(length)
         try:
             payload = json.loads(raw)
         except json.JSONDecodeError:
             self.send_error(400, "Invalid JSON")
-            return
-        profile = payload.get("profile") if isinstance(payload, dict) else None
-        rows = payload.get("rows") if isinstance(payload, dict) else None
-        if not isinstance(profile, dict) or not isinstance(rows, list) or not rows:
-            self.send_error(400, "Missing profile or rows")
-            return
+            return None
+        if not isinstance(payload, dict):
+            self.send_error(400, "Expected a JSON object")
+            return None
+        return payload
 
+    def _template_path(self):
         template_path = Path("assets/ppt-reference/gf-template.pptx")
         site_root = Path.cwd().resolve()
         template_path = (site_root / template_path).resolve()
         try:
             template_path.relative_to(site_root)
         except ValueError:
-            self.send_error(400, "Invalid template path")
+            return None
+        return template_path if template_path.is_file() else None
+
+    def send_template_ppt(self):
+        """Fill the user's GF template (server-side, python-pptx) and return a
+        7-page client overview. The browser cannot do this with pptxgenjs
+        because that library can only build a deck from scratch, not open an
+        existing template.
+
+        Accepts either the raw parse result (`proposal`) from
+        /api/parse-proposal or a hand-built `{profile, rows}` payload; the
+        seven pages are only filled where the proposal actually carries the
+        number, everything else keeps the template's placeholder.
+        """
+        payload = self._read_json(4_000_000)
+        if payload is None:
             return
-        if not template_path.is_file():
-            self.send_error(404, "GF template not found at assets/ppt-reference/gf-template.pptx")
+        proposal = payload.get("proposal") if isinstance(payload.get("proposal"), dict) else None
+        profile = payload.get("profile") if isinstance(payload.get("profile"), dict) else {}
+        rows = payload.get("rows") if isinstance(payload.get("rows"), list) else []
+
+        if proposal is None:
+            # Hand-entered data: rebuild a minimal `detail` from the rows the
+            # browser already validated (year, guaranteed, non-guaranteed).
+            detail = {}
+            for row in rows:
+                if len(row) < 3:
+                    continue
+                year, guaranteed, bonus = int(row[0]), float(row[1]), float(row[2])
+                detail[str(year)] = {
+                    "year": year, "age": int(profile.get("age") or 0) + year,
+                    "guaranteed": guaranteed, "reversionary": bonus, "terminal": 0.0,
+                    "total": guaranteed + bonus, "page": None,
+                }
+            proposal = {"known": bool(detail), "profile": profile, "detail": detail,
+                        "withdrawalPlan": None, "stated": {}, "residual": {}, "warnings": []}
+
+        cfg = default_cfg(proposal, payload.get("cfg") if isinstance(payload.get("cfg"), dict) else None)
+        # Trust the browser's own inputs for anything the user typed over.
+        for key in ("product", "age", "years", "premium", "levy", "fx"):
+            if key in profile and profile[key] not in (None, ""):
+                cfg[key] = profile[key]
+        if not cfg.get("detail"):
+            self.send_error(400, "缺少逐年退保價值資料")
             return
 
-        try:
-            import pptx  # noqa: F401
-        except ImportError:
-            self.send_error(500, "python-pptx not installed. Run: pip install python-pptx")
+        template_path = self._template_path()
+        if template_path is None:
+            self.send_error(404, "GF template not found at assets/ppt-reference/gf-template.pptx")
             return
         try:
-            data = build_template_ppt(profile, rows, template_path)
+            import pptx  # noqa: F401
+            import deck_builder
+        except ImportError as exc:
+            self.send_error(500, f"Missing dependency: {exc}. Run: pip install python-pptx")
+            return
+        try:
+            plan = irr_model.build_plan(cfg)
+            data = deck_builder.build_overview_deck(
+                cfg, plan, template_path,
+                keep_scenario_pages=bool(payload.get("keepScenarioPages")),
+            )
         except Exception as exc:  # surface the real cause to the browser
             self.send_error(500, f"Template build failed: {exc}")
             return
 
-        fname = (str(profile.get("product") or "overview").replace("/", "_"))[:60]
-        disp_name = f"{fname}_完整模版.pptx"
+        fname = (str(cfg.get("product") or "overview").replace("/", "_"))[:60]
+        disp_name = f"{fname}_概览.pptx"
         # HTTP headers are latin-1; provide an ASCII fallback plus a UTF-8
         # filename* (RFC 5987) so browsers get the proper Chinese name.
         self.send_response(200)
         self.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.presentationml.presentation")
-        self.send_header("Content-Disposition", f'attachment; filename="policy_overview_template.pptx"; filename*=UTF-8\'\'{quote(disp_name)}')
+        self.send_header("Content-Disposition", f'attachment; filename="policy_overview.pptx"; filename*=UTF-8\'\'{quote(disp_name)}')
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(data)
 
+    def send_irr_verification(self):
+        """Independently re-derive every headline number and report
+        PASS / WARN / FAIL per check, with the proposal page each figure came
+        from. This is the "is my IRR right?" button: it never reuses the
+        number it is checking — it recomputes it a second, different way."""
+        payload = self._read_json(4_000_000)
+        if payload is None:
+            return
+        proposal = payload.get("proposal") if isinstance(payload.get("proposal"), dict) else None
+        profile = payload.get("profile") if isinstance(payload.get("profile"), dict) else {}
+        rows = payload.get("rows") if isinstance(payload.get("rows"), list) else []
+
+        if proposal is None:
+            detail = {}
+            for row in rows:
+                if len(row) < 3:
+                    continue
+                year, guaranteed, bonus = int(row[0]), float(row[1]), float(row[2])
+                detail[str(year)] = {
+                    "year": year, "age": int(profile.get("age") or 0) + year,
+                    "guaranteed": guaranteed, "reversionary": bonus, "terminal": 0.0,
+                    "total": guaranteed + bonus, "page": None,
+                }
+            proposal = {"known": bool(detail), "profile": profile, "detail": detail,
+                        "withdrawalPlan": None, "stated": {}, "residual": {}, "warnings": []}
+
+        cfg = default_cfg(proposal, payload.get("cfg") if isinstance(payload.get("cfg"), dict) else None)
+        for key in ("product", "age", "years", "premium", "levy", "fx"):
+            if key in profile and profile[key] not in (None, ""):
+                cfg[key] = profile[key]
+        if not cfg.get("detail"):
+            self.send_error(400, "缺少逐年退保價值資料")
+            return
+        try:
+            plan = irr_model.build_plan(cfg)
+            checks = irr_model.verify(cfg, proposal, plan)
+        except Exception as exc:
+            self.send_error(500, f"IRR 驗證失敗：{exc}")
+            return
+
+        body = json.dumps({
+            "checks": checks,
+            "summary": {
+                "pass": sum(1 for c in checks if c["status"] == "pass"),
+                "warn": sum(1 for c in checks if c["status"] == "warn"),
+                "fail": sum(1 for c in checks if c["status"] == "fail"),
+            },
+            "table": [{
+                "year": r["year"], "age": r["age"], "usd": r["usd"], "rmb": r["rmb"],
+                "rate": r["rate"], "guaranteed": r["guaranteed"], "page": r.get("page"),
+            } for r in plan["table"]],
+            "withdrawal": ({
+                "startAge": plan["withdrawal"]["startAge"], "endAge": plan["withdrawal"]["endAge"],
+                "annual": plan["withdrawal"]["annual"], "count": plan["withdrawal"]["count"],
+                "totalWithdrawn": plan["withdrawal"]["totalWithdrawn"],
+                "residual": plan["withdrawal"]["residual"],
+                "grandTotal": plan["withdrawal"]["grandTotal"],
+                "multiple": plan["withdrawal"]["multiple"], "rate": plan["withdrawal"]["rate"],
+            } if plan.get("withdrawal") else None),
+            "promo": plan["promo"],
+            "payments": plan["payments"],
+            "sourcePages": proposal.get("sourcePages") or {},
+            "warnings": proposal.get("warnings") or [],
+        }, ensure_ascii=False).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
     def send_parsed_proposal(self):
-        """Auto-parse an AIA proposal PDF server-side (pdfplumber) and return
-        {known, profile, rows, rowCount, warnings} as JSON. The browser calls
-        this on PDF upload; if known=true it auto-applies the result and
-        triggers the template-PPT download, so the whole upload→PPT flow is
-        one action. Falls back to in-browser manual mapping when known=false
-        or pdfplumber is unavailable."""
+        """Auto-parse an AIA proposal PDF server-side (pdfplumber).
+
+        Returns {known, profile, rows, detail, stated, withdrawalPlan,
+        residual, sourcePages, rowCount, warnings}. The browser calls this on
+        PDF upload; if known=true it auto-applies the result and triggers the
+        template-PPT download, so the whole upload→PPT flow is one action.
+        Falls back to in-browser manual mapping when known=false or pdfplumber
+        is unavailable. `detail` carries every parsed year with its source page
+        so the IRR verification panel can quote where a number came from.
+        """
         length = int(self.headers.get("Content-Length", 0) or 0)
         if length <= 0 or length > 10_000_000:
             self.send_error(400, "Invalid request size")
