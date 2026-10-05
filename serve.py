@@ -141,7 +141,7 @@ class AppHandler(SimpleHTTPRequestHandler):
             if key in profile and profile[key] not in (None, ""):
                 cfg[key] = profile[key]
         if not cfg.get("detail"):
-            self.send_error(400, "缺少逐年退保價值資料")
+            self.send_error(400, "Missing yearly surrender values (rows)")
             return
 
         template_path = self._template_path()
@@ -207,13 +207,13 @@ class AppHandler(SimpleHTTPRequestHandler):
             if key in profile and profile[key] not in (None, ""):
                 cfg[key] = profile[key]
         if not cfg.get("detail"):
-            self.send_error(400, "缺少逐年退保價值資料")
+            self.send_error(400, "Missing yearly surrender values (rows)")
             return
         try:
             plan = irr_model.build_plan(cfg)
             checks = irr_model.verify(cfg, proposal, plan)
         except Exception as exc:
-            self.send_error(500, f"IRR 驗證失敗：{exc}")
+            self.send_error(500, f"IRR verification failed: {exc}")
             return
 
         body = json.dumps({
