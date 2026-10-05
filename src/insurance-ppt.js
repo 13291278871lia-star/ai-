@@ -99,7 +99,7 @@ export function bind() {
   const coupons=String(val('#insCoupons')||'').split(/[,，]/).map(s=>s.trim()).filter(Boolean).map(s=>{
    const m=s.match(/^(\d+)\s*[×xX*]\s*([\d,]+(?:\.\d+)?)$/);
    if(!m)throw Error('現金券格式應為「張數×面額」，例如 2×1250、6×63');
-   return {count:Number(m.group(1)),value:Number(m.group(2).replace(/,/g,''))};});
+   return {count:Number(m[1]),value:Number(m[2].replace(/,/g,''))};});
   return {promo:{rebatePct:num('#insRebatePct'),rebateDeadline:val('#insRebateDeadline').trim(),coupons,prepay1Rate:num('#insPrepay1Rate'),prepay4Rate:num('#insPrepay4Rate'),promoStart:val('#insPromoStart').trim(),promoEnd:val('#insPromoEnd').trim()},
    insuredTitle:val('#insInsuredTitle').trim()||null,target:val('#insTarget').trim()||null,advantage:val('#insAdvantage').trim()||null};
  };
