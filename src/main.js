@@ -706,31 +706,302 @@ function sop() {
  return appShell(`<section class="page page-heading"><p class="eyebrow">新人簽單 SOP</p><h1>由第一天開始，<br>走好每一次成交流程。</h1><p>這是一份新人學習路徑：先理解客戶需要，再準備方案、跟進與服務。每完成一步，可在右側勾選。</p></section><section class="page sop-reference"><div><span>學習參考</span><h2>保險銷售循環流程圖</h2><p>先閱讀完整銷售循環，再依下方 10 個步驟開始學習及實踐。</p></div><figure class="sop-reference-image"><img src="assets/training/sales/保險銷售循環流程圖_繁體.png?v=20260921-demand-analysis" alt="新人保險簽單銷售循環 SOP：尋找客戶、接洽約見、會面架構、需求分析、方案說明、顧慮與成交、申請與售後"></figure></section><section class="page sop-summary"><div><span class="tag">${completed.size} / ${sopSteps.length} 已完成</span><h2>從 0 到成交的 10 個步驟</h2></div><button class="text-button" id="resetSop">重設學習進度</button></section><section class="page sop-list">${steps}</section><section class="page sop-footer"><p><b>使用提示：</b>每个有工具协助的步骤下方，均已放上可直接点击的快捷按钮。</p></section>`);
 }
 
-const ilasMaterials = [
-  ["01", "AIA「兩全保」保障型投資相連壽險計劃(整付保費)培訓資料.pdf", "內部學習資料", "assets/training/ilas/AIA「兩全保」保障型投資相連壽險計劃(整付保費)培訓資料.pdf", "必讀"],
-  ["02", "AIA「兩全保」保障型投資相連壽險計劃(整付保費)產品研習資料 PRODUCT STUDY MATERIALS.pdf", "內部學習資料", "assets/training/ilas/AIA「兩全保」保障型投資相連壽險計劃(整付保費)產品研習資料 PRODUCT STUDY MATERIALS.pdf", "必讀"],
-  ["03", "保障型投資相連壽險概念簡介.pdf", "內部學習資料", "assets/training/ilas/保障型投資相連壽險概念簡介.pdf", "參考"],
-  ["04", "保障型投資相連壽險概念簡介閃卡.pdf", "內部學習資料", "assets/training/ilas/保障型投資相連壽險概念簡介閃卡.pdf", "溫習"],
-  ["05", "AIA 2-IN-1 PROTECTION LINKED PLAN (SINGLE PREMIUM) ONLINE TRAINING (COMPULSORY) TRAINING DECK.pdf", "內部學習資料", "assets/training/ilas/AIA 2-IN-1 PROTECTION LINKED PLAN (SINGLE PREMIUM) ONLINE TRAINING (COMPULSORY) TRAINING DECK.pdf", "補充"],
-  ["06", "AIA「两全保」保障型投资相连寿险计划(整付保费)培训资料.pdf", "內部學習資料", "assets/training/ilas/AIA「两全保」保障型投资相连寿险计划(整付保费)培训资料.pdf", "補充"],
-  ["07", "保障型投资寿险相连概念简介.pdf", "內部學習資料", "assets/training/ilas/保障型投资寿险相连概念简介.pdf", "補充"],
+const masterVideoSeries = [
+  {
+    "title": "新人起動",
+    "subtitle": "新人基礎與實戰分享",
+    "videos": [
+      {
+        "title": "新人起動 ep 01",
+        "src": "assets/training/masters/videos/新人起動/新人起動 ep 01.mp4"
+      },
+      {
+        "title": "新人起動 ep 02",
+        "src": "assets/training/masters/videos/新人起動/新人起動 ep 02.mp4"
+      },
+      {
+        "title": "新人起動 ep 03",
+        "src": "assets/training/masters/videos/新人起動/新人起動 ep 03.mp4"
+      },
+      {
+        "title": "新人起動 ep 04",
+        "src": "assets/training/masters/videos/新人起動/新人起動 ep 04.mp4"
+      },
+      {
+        "title": "新人起動 ep 05",
+        "src": "assets/training/masters/videos/新人起動/新人起動 ep 05.mp4"
+      },
+      {
+        "title": "新人起動 ep 06",
+        "src": "assets/training/masters/videos/新人起動/新人起動 ep 06.mp4"
+      },
+      {
+        "title": "新人起動 ep 07",
+        "src": "assets/training/masters/videos/新人起動/新人起動 ep 07.mp4"
+      },
+      {
+        "title": "新人起動 ep 08",
+        "src": "assets/training/masters/videos/新人起動/新人起動 ep 08.mp4"
+      },
+      {
+        "title": "新人起動 ep 09",
+        "src": "assets/training/masters/videos/新人起動/新人起動 ep 09.mp4"
+      },
+      {
+        "title": "新人起動 ep 10",
+        "src": "assets/training/masters/videos/新人起動/新人起動 ep 10.mp4"
+      }
+    ]
+  },
+  {
+    "title": "敗部復活 · EP 01",
+    "subtitle": "高手經驗分段課程",
+    "videos": [
+      {
+        "title": "EP 01 · 第 1 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活.ep01 2:8mp4.mp4"
+      },
+      {
+        "title": "EP 01 · 第 2 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活ep01 1:8.mp4"
+      },
+      {
+        "title": "EP 01 · 第 3 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活ep01 3:8.mp4"
+      },
+      {
+        "title": "EP 01 · 第 4 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活ep01 4:8.mp4"
+      },
+      {
+        "title": "EP 01 · 第 5 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活ep01 5:8.mp4"
+      },
+      {
+        "title": "EP 01 · 第 6 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活ep01 6:8.mp4"
+      },
+      {
+        "title": "EP 01 · 第 7 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活ep01 7:8.mp4"
+      },
+      {
+        "title": "EP 01 · 第 8 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活ep01 8:8.mp4"
+      }
+    ]
+  },
+  {
+    "title": "敗部復活 · EP 02",
+    "subtitle": "高手經驗分段課程",
+    "videos": [
+      {
+        "title": "EP 02 · 第 1 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 1:9.mp4"
+      },
+      {
+        "title": "EP 02 · 第 2 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 2:9.mp4"
+      },
+      {
+        "title": "EP 02 · 第 3 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 3:9.mp4"
+      },
+      {
+        "title": "EP 02 · 第 4 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 4:9.mp4"
+      },
+      {
+        "title": "EP 02 · 第 5 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 5:9.mp4"
+      },
+      {
+        "title": "EP 02 · 第 6 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 6:9.mp4"
+      },
+      {
+        "title": "EP 02 · 第 7 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 7:9.mp4"
+      },
+      {
+        "title": "EP 02 · 第 8 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 8:9.mp4"
+      },
+      {
+        "title": "EP 02 · 第 9 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 9:9.mp4"
+      }
+    ]
+  },
+  {
+    "title": "敗部復活 · EP 03",
+    "subtitle": "高手經驗分段課程",
+    "videos": [
+      {
+        "title": "EP 03 · 第 1 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 1:8.mp4"
+      },
+      {
+        "title": "EP 03 · 第 2 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 2:8.mp4"
+      },
+      {
+        "title": "EP 03 · 第 3 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 3:8.mp4"
+      },
+      {
+        "title": "EP 03 · 第 4 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 4:8.mp4"
+      },
+      {
+        "title": "EP 03 · 第 5 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 5:8.mp4"
+      },
+      {
+        "title": "EP 03 · 第 6 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 6:8.mp4"
+      },
+      {
+        "title": "EP 03 · 第 7 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 7:8.mp4"
+      },
+      {
+        "title": "EP 03 · 第 8 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 8:8.mp4"
+      }
+    ]
+  },
+  {
+    "title": "敗部復活 · EP 04",
+    "subtitle": "高手經驗分段課程",
+    "videos": [
+      {
+        "title": "EP 04 · 第 1 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 1:8.mp4"
+      },
+      {
+        "title": "EP 04 · 第 2 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 2:8.mp4"
+      },
+      {
+        "title": "EP 04 · 第 3 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 3:8.mp4"
+      },
+      {
+        "title": "EP 04 · 第 4 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 4:8.mp4"
+      },
+      {
+        "title": "EP 04 · 第 5 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 5:8.mp4"
+      },
+      {
+        "title": "EP 04 · 第 6 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 6:8.mp4"
+      },
+      {
+        "title": "EP 04 · 第 7 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 7:8.mp4"
+      },
+      {
+        "title": "EP 04 · 第 8 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 8:8.mp4"
+      }
+    ]
+  },
+  {
+    "title": "敗部復活 · EP 05",
+    "subtitle": "高手經驗分段課程",
+    "videos": [
+      {
+        "title": "EP 05 · 第 1 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 1:8.mp4"
+      },
+      {
+        "title": "EP 05 · 第 2 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 2:8.mp4"
+      },
+      {
+        "title": "EP 05 · 第 3 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 3:8.mp4"
+      },
+      {
+        "title": "EP 05 · 第 4 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 4:8.mp4"
+      },
+      {
+        "title": "EP 05 · 第 5 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 5:8.mp4"
+      },
+      {
+        "title": "EP 05 · 第 6 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 6:8.mp4"
+      },
+      {
+        "title": "EP 05 · 第 7 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 7:8.mp4"
+      },
+      {
+        "title": "EP 05 · 第 8 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 8:8.mp4"
+      }
+    ]
+  },
+  {
+    "title": "敗部復活 · EP 06",
+    "subtitle": "高手經驗分段課程",
+    "videos": [
+      {
+        "title": "EP 06 · 第 1 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 1:9.mp4"
+      },
+      {
+        "title": "EP 06 · 第 2 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 2:9.mp4"
+      },
+      {
+        "title": "EP 06 · 第 3 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 3:9.mp4"
+      },
+      {
+        "title": "EP 06 · 第 4 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 4:9.mp4"
+      },
+      {
+        "title": "EP 06 · 第 5 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 5:9.mp4"
+      },
+      {
+        "title": "EP 06 · 第 6 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 6:9.mp4"
+      },
+      {
+        "title": "EP 06 · 第 7 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 7:9.mp4"
+      },
+      {
+        "title": "EP 06 · 第 8 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 8:9.mp4"
+      },
+      {
+        "title": "EP 06 · 第 9 节",
+        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 9:9.mp4"
+      }
+    ]
+  }
 ];
 
-const underwritingMaterials = [
-  ["01", "核保指引.pdf"],
-  ["02", "核保原理.pdf"],
-  ["03", "核保指引 附錄1 - 打擊洗錢修例指引之營運規定.pdf"],
-  ["04", "核保指引 附錄2 - 財政核保要求.pdf"],
-  ["05", "核保指引 附錄3 - 非體檢優惠限額及例行體檢要求及保證繕發和簡易核保限額.pdf"],
-  ["06", "核保指引 附錄4 - 國籍居留評級表.pdf"],
-  ["07", "核保指引 附錄5 - 公司要員保險要求.pdf"],
-  ["08", "核保指引 附錄6 - 可保利益聲明.pdf"],
+const masterBooks = [
+  ["01", "醫療天書 2026［完整版］（繁體）", "完整醫療保障參考資料", "assets/training/masters/books/醫療天書 2026 [完整版] (繁體).pdf", "完整版"],
+  ["02", "醫療天書 2026［精華版］（繁體）", "快速掌握醫療保障重點", "assets/training/masters/books/醫療天書 2026 [精華版] (繁體).pdf", "精華版"],
+  ["03", "退休天書（2026年9月 · 繁體中文）", "退休規劃內部研習資料", "assets/training/masters/books/(2026年9月) 退休天書 (繁體中文).pdf", "最新版"],
 ];
 
 function learning() {
- const materials = ilasMaterials.map(([number, title, description, href, label]) => `<a class="learning-material" href="${encodeURI(href)}" target="_blank" rel="noreferrer"><span class="material-number">${number}</span><span class="material-file">▤</span><div><b>${title}</b><small>${description}</small></div><i>${label}</i><em>開啟 <strong>↗</strong></em></a>`).join("");
- const underwriting = underwritingMaterials.map(([number, title]) => { const href = `assets/training/underwriting/${title}`; return `<a class="learning-material" href="${encodeURI(href)}" target="_blank" rel="noreferrer"><span class="material-number">${number}</span><span class="material-file">▤</span><div><b>${title}</b><small>內部核保參考資料</small></div><em>開啟 <strong>↗</strong></em></a>`; }).join("");
- return appShell(`<section class="page learning-hero"><div><p class="eyebrow">內部學習中心 · ILAS</p><h1>把複雜知識，<br>學得更有次序。</h1><p>ILAS 內部課程與研習資料</p></div><div class="learning-hero-stats"><div><b>01</b><span>必修影片</span></div><div><b>02</b><span>研習資料</span></div><div><b>03</b><span>學習階段</span></div></div></section><section class="page learning-warning"><b>內部培訓材料</b><span>此區只供內部培訓及牌照研習使用，不可轉發客戶或第三方。產品狀態、版本及可對客使用資料，均須以公司最新正式批准文件為準。</span></section><section class="page learning-path"><span>01</span><div><b>觀看必修影片</b><small>先建立產品全貌</small></div><i>→</i><span>02</span><div><b>閱讀核心教材</b><small>掌握牌照與概念重點</small></div><i>→</i><span>03</span><div><b>用記憶卡溫習</b><small>準備下一輪學習</small></div></section><section class="page learning-layout"><div class="learning-course"><div class="course-top"><div><div class="course-label">STEP 01 · 必修課程</div><h2>課程影片</h2><p>先看影片了解內容結構，再進入下方研習資料。</p></div><span class="course-duration">影片學習</span></div><h3 class="course-product-title">投資相連壽險 ILAS｜AIA「兩全保」保障型投資相連壽險計劃（整付保費）</h3><video controls preload="metadata" class="course-video"><source src="assets/training/ilas/ilas-required-course.mov" type="video/quicktime">你的瀏覽器未能直接播放此影片。</video><a class="video-fallback" href="assets/training/ilas/ilas-required-course.mov" target="_blank" rel="noreferrer">未能播放？在新視窗開啟影片 ↗</a></div><div class="learning-list"><div class="learning-list-heading"><div><div class="panel-kicker">STEP 02–03 · 課程資料</div><h2>依次閱讀與溫習</h2></div><span>7 份資料</span></div>${materials}</div></section><section class="page learning-list underwriting-library"><div class="learning-list-heading"><div><div class="panel-kicker">補充資料 · 核保</div><h2>核保指引</h2><p>點選檔案可直接開啟。只供內部參考，實際申請請以公司當時正式流程及最新文件為準。</p></div><span>8 份資料</span></div>${underwriting}</section><section class="page learning-next"><b>完成後下一步</b><span>完成內部研習後，回到「新人簽單 SOP」了解何時使用資料庫與見客助手；實際對客前，仍須以已批准的對客文件及主管指引為準。</span><button class="primary secondary" data-route="sop">返回新人簽單 SOP <span>→</span></button></section>`);
+ const firstVideo = masterVideoSeries[0].videos[0];
+ const series = masterVideoSeries.map((group, groupIndex) => `<details class="master-series" ${groupIndex === 0 ? "open" : ""}><summary><span><b>${escapeHtml(group.title)}</b><small>${escapeHtml(group.subtitle)}</small></span><em>${group.videos.length} 段</em></summary><div class="master-video-grid">${group.videos.map((video, videoIndex) => `<button class="master-video-card ${groupIndex === 0 && videoIndex === 0 ? "active" : ""}" data-master-video="${encodeURI(video.src)}" data-master-title="${escapeHtml(video.title)}"><span>${String(videoIndex + 1).padStart(2, "0")}</span><div><b>${escapeHtml(video.title)}</b><small>點擊播放</small></div><i>▶</i></button>`).join("")}</div></details>`).join("");
+ const books = masterBooks.map(([number, title, description, href, label]) => `<a class="learning-material" href="${encodeURI(href)}" target="_blank" rel="noreferrer"><span class="material-number">${number}</span><span class="material-file">▤</span><div><b>${title}</b><small>${description}</small></div><i>${label}</i><em>開啟 <strong>↗</strong></em></a>`).join("");
+ return appShell(`<section class="page learning-hero"><div><p class="eyebrow">內部學習中心 · 高手分享</p><h1>向高手學習，<br>把經驗變成行動。</h1><p>實戰分享、成長課程與天書系列資料</p></div><div class="learning-hero-stats"><div><b>60</b><span>分享影片</span></div><div><b>07</b><span>課程系列</span></div><div><b>03</b><span>天書資料</span></div></div></section><section class="page learning-warning"><b>內部學習材料</b><span>此區只供內部培訓使用，不可轉發客戶或第三方。對客內容仍須以公司最新正式批准文件為準。</span></section><section class="page masters-layout"><div class="master-player"><div class="course-label">高手分享 · 現正播放</div><h2 id="masterVideoTitle">${escapeHtml(firstVideo.title)}</h2><video id="masterVideoPlayer" controls preload="metadata" class="course-video"><source src="${encodeURI(firstVideo.src)}" type="video/mp4">你的瀏覽器未能直接播放此影片。</video><p>從右側課程目錄選擇影片，播放器會自動切換。</p></div><div class="master-catalog"><div class="learning-list-heading"><div><div class="panel-kicker">影片課程</div><h2>高手分享</h2></div><span>60 段影片</span></div>${series}</div></section><section class="page learning-list master-books"><div class="learning-list-heading"><div><div class="panel-kicker">研習資料</div><h2>天書系列</h2><p>按主題整理的內部參考資料，可直接開啟 PDF 閱讀。</p></div><span>3 份資料</span></div>${books}</section><section class="page learning-next"><b>學習提示</b><span>先按系列觀看影片，再使用天書系列整理重點；實際應用前請核對最新正式資料。</span><button class="primary secondary" data-route="sop">前往新人簽單 SOP <span>→</span></button></section>`);
 }
 
 function ppt() { return appShell(insurancePanel()+`<section class="page panel"><details><summary>通用演示大綱（保留原功能）</summary>${textField("主題", "pptTopic", "例如：家庭保障規劃入門", 2)}${formField("頁數", "pptSlides", ["5 頁精簡版", "7 頁標準版", "10 頁詳細版"])}<button class="primary" id="generatePpt">生成 PPT 大綱 ✦</button><div id="pptOutput"></div></details></section>`); }
@@ -777,6 +1048,17 @@ function bindPage() {
    localStorage.removeItem("aia-sop-completed");
    render();
  });
+ document.querySelectorAll("[data-master-video]").forEach((button) => button.addEventListener("click", () => {
+   const player = document.querySelector("#masterVideoPlayer");
+   const title = document.querySelector("#masterVideoTitle");
+   if (!player || !title) return;
+   player.src = button.dataset.masterVideo;
+   title.textContent = button.dataset.masterTitle;
+   document.querySelectorAll("[data-master-video]").forEach((item) => item.classList.toggle("active", item === button));
+   player.load();
+   player.play().catch(() => {});
+   player.scrollIntoView({ behavior: "smooth", block: "center" });
+ }));
  document.querySelectorAll("[data-library-category]").forEach((button) => button.addEventListener("click", () => {
    selectedLibraryCategory = button.dataset.libraryCategory;
    render();
