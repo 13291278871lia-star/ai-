@@ -9,7 +9,7 @@ const modules = {
   library: { icon: "▤", title: "產品資料", subtitle: "按產品類別查閱已批准資料", color: "wine" },
   compare: { icon: "⇄", title: "產品對比", subtitle: "醫療對比中心與資料庫產品對比", color: "teal" },
   meeting: { icon: "◎", title: "見客助手", subtitle: "3 分鐘整理會前準備", color: "teal" },
-  ppt: { icon: "▣", title: "PPT 一鍵生成", subtitle: "生成可編輯演示文稿", color: "coral" },
+  ppt: { icon: "▣", title: "PPT 製作", subtitle: "生成可編輯演示文稿", color: "coral" },
   sop: { icon: "✓", title: "新人簽單 SOP", subtitle: "由入門到成交的學習路徑", color: "sage" },
   learning: { icon: "▶", title: "內部學習中心", subtitle: "課程影片與內部牌照研習資料", color: "plum" },
   question: { icon: "?", title: "問題助手", subtitle: "整理日常工作思路", color: "violet" },
@@ -424,7 +424,7 @@ function appShell(content) {
   return `<div class="app-shell">
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">A</div><div><strong>AI 工作台</strong><small>内部 MVP · 演示版</small></div></div>
-      <nav>${navItem("home", "⌂", "首頁")}${navGroup("library", ["promotion", "market", "discontinued", "payment", "guides"])}${navItem("sop", "✓", "新人簽單 SOP")}${navItem("learning", "▶", "內部學習中心")}${navItem("ppt", "▣", "PPT 一鍵生成")}${navItem("salestool", "✦", "銷售工具")}</nav>
+      <nav>${navItem("home", "⌂", "首頁")}${navGroup("library", ["promotion", "market", "discontinued", "payment", "guides"])}${navItem("sop", "✓", "新人簽單 SOP")}${navItem("learning", "▶", "內部學習中心")}${navItem("ppt", "▣", "PPT 一鍵生成")}</nav>
       <div class="sidebar-footer"><span class="status-dot"></span>示範模式<br><small>請勿輸入客戶個人資料</small></div>
     </aside>
     <main class="main"><header class="topbar"><button id="menuButton" class="menu-button">☰</button><div class="notice">此為內部示範版 · 所有輸出均須人工覆核後使用</div><div class="theme-preview" style="display:flex" role="group" aria-label="配色預覽"><span class="theme-label">配色</span><button title="高端商务蓝" class="theme-choice ${uiTheme === "executive-blue" ? "active" : ""}" data-theme-choice="executive-blue">商务蓝</button><button title="高端商务绿" class="theme-choice ${uiTheme === "executive-green" ? "active" : ""}" data-theme-choice="executive-green">商务绿</button><button title="高端象牙白" class="theme-choice ${uiTheme === "executive-white" ? "active" : ""}" data-theme-choice="executive-white">象牙白</button><button title="原始红色系" class="theme-choice ${uiTheme === "classic-red" ? "active" : ""}" data-theme-choice="classic-red">經典紅</button><button title="經典藏藍－啞光金" class="theme-choice ${uiTheme === "navy-gold" ? "active" : ""}" data-theme-choice="navy-gold">藏藍金</button><button title="炭灰黑－暗酒紅－香檳金" class="theme-choice ${uiTheme === "guardian" ? "active" : ""}" data-theme-choice="guardian">炭灰紅</button><button title="現代 Slate 灰藍" class="theme-choice ${uiTheme === "slate" ? "active" : ""}" data-theme-choice="slate">Slate</button><button title="深色模式－黑金尊享" class="theme-choice ${uiTheme === "black-gold" ? "active" : ""}" data-theme-choice="black-gold">黑金</button></div><div class="avatar">演</div></header>${sectionNavigation()}${content}</main>
@@ -447,7 +447,7 @@ function textField(label, id, placeholder, rows = 3) { return `<label class="fie
 
 function home() {
   return appShell(`<section class="page hero"><div><p class="eyebrow">CHOIX · AI WORKBENCH</p><h1>讓每一次會面準備<br>更有把握。</h1><p class="lead">由客戶輪廓出發，連結已批准的保障資料，<br>生成有根據、可覆核的工作草稿。</p><button class="hero-action" data-route="meeting">開啟見客助手 <span>→</span></button></div><div class="hero-badge">2026<br><small>智選工作台</small></div></section>
-  <section class="page dashboard"><div class="section-title"><div><p class="eyebrow">快速開始</p><h2>今天想完成什麼？</h2></div><span class="live-label"><i></i> 已連接示範資料庫</span></div><div class="card-grid">${Object.entries(modules).filter(([id]) => id !== "compare" && !Object.values(moduleGroups).flat().includes(id)).map(([id, m]) => `<button class="module-card ${m.color}" data-route="${id}"><div class="module-icon">${m.icon}</div><h3>${m.title}</h3><p>${m.subtitle}</p><span>進入工作流程 <b>→</b></span></button>`).join("")}</div>
+  <section class="page dashboard"><div class="section-title"><div><p class="eyebrow">快速開始</p><h2>今天想完成什麼？</h2></div><span class="live-label"><i></i> 已連接示範資料庫</span></div><div class="card-grid">${Object.entries(modules).filter(([id]) => !["compare", "salestool"].includes(id) && !Object.values(moduleGroups).flat().includes(id)).map(([id, m]) => `<button class="module-card ${m.color}" data-route="${id}"><div class="module-icon">${m.icon}</div><h3>${m.title}</h3><p>${m.subtitle}</p><span>進入工作流程 <b>→</b></span></button>`).join("")}</div>
   <div class="principle-grid"><div><span>01</span><h3>資料有根據</h3><p>每項建議均應連結已批准文件、版本與頁碼。</p></div><div><span>02</span><h3>人員作最後判斷</h3><p>AI 提供草稿，不取代持牌人士或主管覆核。</p></div><div><span>03</span><h3>保障私隱</h3><p>只輸入概括、已脫敏的客戶輪廓，不輸入個人資料。</p></div></div></section>`);
 }
 
