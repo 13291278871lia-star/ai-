@@ -7,7 +7,7 @@ const modules = {
   salestool: { icon: "✦", title: "銷售工具", subtitle: "上傳計劃書，生成個案PPT", color: "gold" },
   matching: { icon: "◇", title: "會前準備", subtitle: "由客戶輪廓尋找已批准資料", color: "gold" },
   library: { icon: "▤", title: "產品資料", subtitle: "按產品類別查閱已批准資料", color: "wine" },
-  compare: { icon: "⇄", title: "產品對比", subtitle: "醫療對比中心與資料庫產品對比", color: "teal" },
+  compare: { icon: "⇄", title: "產品對比", subtitle: "產品對比中心與資料庫產品對比", color: "teal" },
   meeting: { icon: "◎", title: "見客助手", subtitle: "3 分鐘整理會前準備", color: "teal" },
   ppt: { icon: "▣", title: "PPT 製作", subtitle: "生成可編輯演示文稿", color: "coral" },
   sop: { icon: "✓", title: "新人簽單 SOP", subtitle: "由入門到成交的學習路徑", color: "sage" },
@@ -424,14 +424,14 @@ function appShell(content) {
   return `<div class="app-shell">
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">A</div><div><strong>AI 工作台</strong><small>内部 MVP · 演示版</small></div></div>
-      <nav>${navItem("home", "⌂", "首頁")}${navGroup("library", ["promotion", "market", "discontinued", "payment", "guides"])}${navItem("sop", "✓", "新人簽單 SOP")}${navItem("learning", "▶", "內部學習中心")}${navItem("ppt", "▣", "PPT 製作")}</nav>
+      <nav>${navItem("home", "⌂", "首頁")}${navGroup("library", ["promotion", "market", "discontinued", "payment", "guides", "compare"])}${navItem("sop", "✓", "新人簽單 SOP")}${navItem("learning", "▶", "內部學習中心")}${navItem("ppt", "▣", "PPT 製作")}</nav>
       <div class="sidebar-footer"><span class="status-dot"></span>示範模式<br><small>請勿輸入客戶個人資料</small></div>
     </aside>
     <main class="main"><header class="topbar"><button id="menuButton" class="menu-button">☰</button><div class="notice">此為內部示範版 · 所有輸出均須人工覆核後使用</div><div class="theme-preview" style="display:flex" role="group" aria-label="配色預覽"><span class="theme-label">配色</span><button title="高端商务蓝" class="theme-choice ${uiTheme === "executive-blue" ? "active" : ""}" data-theme-choice="executive-blue">商务蓝</button><button title="高端商务绿" class="theme-choice ${uiTheme === "executive-green" ? "active" : ""}" data-theme-choice="executive-green">商务绿</button><button title="高端象牙白" class="theme-choice ${uiTheme === "executive-white" ? "active" : ""}" data-theme-choice="executive-white">象牙白</button><button title="原始红色系" class="theme-choice ${uiTheme === "classic-red" ? "active" : ""}" data-theme-choice="classic-red">經典紅</button><button title="經典藏藍－啞光金" class="theme-choice ${uiTheme === "navy-gold" ? "active" : ""}" data-theme-choice="navy-gold">藏藍金</button><button title="炭灰黑－暗酒紅－香檳金" class="theme-choice ${uiTheme === "guardian" ? "active" : ""}" data-theme-choice="guardian">炭灰紅</button><button title="現代 Slate 灰藍" class="theme-choice ${uiTheme === "slate" ? "active" : ""}" data-theme-choice="slate">Slate</button><button title="深色模式－黑金尊享" class="theme-choice ${uiTheme === "black-gold" ? "active" : ""}" data-theme-choice="black-gold">黑金</button></div><div class="avatar">演</div></header>${sectionNavigation()}${content}</main>
   </div>`;
 }
 function navItem(id, icon, label) { return `<button class="nav-item ${currentModule === id ? "active" : ""}" data-route="${id}"><span>${icon}</span>${label}</button>`; }
-const moduleGroups = { library: ["promotion", "market", "discontinued", "payment", "guides"], meeting: ["matching", "question", "practice"] };
+const moduleGroups = { library: ["promotion", "market", "discontinued", "payment", "guides", "compare"], meeting: ["matching", "question", "practice"] };
 function navGroup(parent, children) {
   const m = modules[parent];
   return `<div class="nav-group" role="group" aria-label="${m.title}">${navItem(parent, m.icon, m.title)}<div class="nav-children">${children.map(id => navItem(id, modules[id].icon, modules[id].title)).join("")}</div></div>`;
@@ -480,7 +480,7 @@ function library() {
 }
 
 const compareModes = [
- { id: "medical", label: "醫療產品對比中心" },
+ { id: "medical", label: "產品對比" },
  { id: "library", label: "資料庫產品對比" }
 ];
 
@@ -489,7 +489,7 @@ function compareModeTabs() {
 }
 
 function medicalComparePage() {
- return appShell(`<section class="page page-heading"><p class="eyebrow">產品對比</p><h1>醫療產品對比中心</h1><p>依內部產品資料冊整理：產品速覽、內部產品定位、市場特性比較、保費比較、國籍及居住地資格，以及按客戶畫像的智能推薦。所有數字均標示資料來源頁碼。</p></section>${compareModeTabs()}<section class="page">${medicalComparePanel()}</section>`);
+ return appShell(`<section class="page page-heading"><p class="eyebrow">產品對比</p><h1>產品對比</h1><p>依內部產品資料冊整理：產品速覽、內部產品定位、市場特性比較、保費比較、國籍及居住地資格，以及按客戶畫像的智能推薦。所有數字均標示資料來源頁碼。</p></section>${compareModeTabs()}<section class="page">${medicalComparePanel()}</section>`);
 }
 
 function compare() {
