@@ -10,6 +10,7 @@ __pycache__/
 tmp/
 work/
 outputs/
+private-build/
 .codex-finalizer/
 .chart-data-*/
 docx-build/

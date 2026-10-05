@@ -156,6 +156,12 @@ class AppHandler(SimpleHTTPRequestHandler):
             return
         try:
             plan = irr_model.build_plan(cfg)
+            checks = irr_model.verify(cfg, proposal, plan)
+            failed = [check for check in checks if check.get("status") == "fail"]
+            if failed:
+                detail = "；".join(f"{check.get('name')}：{check.get('detail', '')}" for check in failed)
+                self.send_error(422, f"IRR verification failed; PPT was not generated. {detail}")
+                return
             data = deck_builder.build_overview_deck(
                 cfg, plan, template_path,
                 keep_scenario_pages=bool(payload.get("keepScenarioPages")),
