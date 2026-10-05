@@ -409,7 +409,6 @@ let currentModule = "home";
 let practiceTurn = 0;
 let selectedLibraryCategory = null;
 let comparisonProductIds = [];
-let compareMode = localStorage.getItem("aia-compare-mode") || "medical";
 
 function getUiTheme() {
   return localStorage.getItem("aia-ui-theme") || "slate";
@@ -479,25 +478,12 @@ function library() {
  return appShell(`<section class="page library-layout"><div class="library-note"><span>資料庫規則</span><p>資料庫只顯示本次同步的最新整理版本。點開產品後，可直接開啟對應 PDF。</p><small>已同步：友扣稅 ${taxProducts.length} 項產品／${categoryFileCounts["友扣稅"]} 份資料<br>AIA 健康系列 ${healthProductFolders.length} 項產品／${categoryFileCounts["AIA 健康系列"]} 份資料<br>定期壽險 ${termProductFolders.length} 項產品／${categoryFileCounts["定期壽險"]} 份資料<br>醫療 ${medicalProductFolders.length} 項產品／${categoryFileCounts["醫療"]} 份資料</small></div><div class="category-list">${list}</div></section>${chosenProducts}`);
 }
 
-const compareModes = [
- { id: "medical", label: "產品對比" },
- { id: "library", label: "資料庫產品對比" }
-];
-
-function compareModeTabs() {
- return `<nav class="page section-navigation" aria-label="產品對比模式">${compareModes.map((mode) => `<button class="section-tab ${compareMode === mode.id ? "active" : ""}" data-compare-mode="${mode.id}" ${compareMode === mode.id ? 'aria-current="true"' : ''}>${mode.label}</button>`).join("")}</nav>`;
-}
-
 function medicalComparePage() {
- return appShell(`<section class="page page-heading"><p class="eyebrow">產品對比</p><h1>產品對比</h1><p>依內部產品資料冊整理：產品速覽、內部產品定位、市場特性比較、保費比較、國籍及居住地資格，以及按客戶畫像的智能推薦。所有數字均標示資料來源頁碼。</p></section>${compareModeTabs()}<section class="page">${medicalComparePanel()}</section>`);
+ return appShell(`<section class="page page-heading"><p class="eyebrow">產品對比</p><h1>產品對比</h1><p>依內部產品資料冊整理：產品速覽、內部產品定位、市場特性比較、保費比較、國籍及居住地資格，以及按客戶畫像的智能推薦。所有數字均標示資料來源頁碼。</p></section><section class="page">${medicalComparePanel()}</section>`);
 }
 
 function compare() {
- if (compareMode === "medical") return medicalComparePage();
- const selected = comparisonProductIds.map((id) => ({ id, product: productDocuments[Number(id)] })).filter(({ product }) => product);
- const options = productDocuments.map((product, index) => `<option value="${index}" ${comparisonProductIds.includes(String(index)) ? "disabled" : ""}>${escapeHtml(product.category)}｜${escapeHtml(product.title)}</option>`).join("");
- const selectedCards = selected.length ? selected.map(({ id, product }, index) => `<article class="compare-product"><span>${String(index + 1).padStart(2, "0")}</span><div><b>${escapeHtml(product.title)}</b><small>${escapeHtml(product.category)} · ${escapeHtml(product.planType || "資料暫未提供")}</small></div><button class="text-button" data-remove-compare="${id}">移除</button></article>`).join("") : `<div class="compare-empty">請從現有產品資料加入至少 2 項產品。</div>`;
- return appShell(`<section class="page page-heading"><p class="eyebrow">產品對比</p><h1>只比較已選產品，<br>清楚保留資料邊界。</h1><p>可選擇 2 至 4 項現有資料庫產品。未在已選資料中提供的內容，系統會標示為「資料暫未提供」。</p></section>${compareModeTabs()}<section class="page compare-layout"><div class="panel compare-selector"><div class="panel-kicker">選擇產品</div><h2>建立對比組合</h2><label class="field"><span>現有產品資料產品</span><select id="compareProductSelect"><option value="">請選擇產品</option>${options}</select></label><button class="primary secondary" id="addCompareProduct" ${selected.length >= 4 ? "disabled" : ""}>加入對比產品</button><p class="tiny">已選 ${selected.length} / 4 項；至少選擇 2 項才可開始對比。</p><div class="compare-selected">${selectedCards}</div><button class="primary" id="startCompare" ${selected.length < 2 ? "disabled" : ""}>開始對比 <span>→</span></button></div><div class="panel output-panel compare-output" id="compareOutput"><div class="empty-state"><div>⇄</div><h3>選擇產品後開始</h3><p>只會讀取你加入的產品及其資料來源，不會讀取整個產品資料。</p></div></div></section>`);
+ return medicalComparePage();
 }
 
 function compareFieldsForProduct(product, useGeneric = false) {
@@ -1081,11 +1067,6 @@ function bindPage() {
    render();
  }));
  document.querySelector("#startCompare")?.addEventListener("click", startProductComparison);
- document.querySelectorAll("[data-compare-mode]").forEach((button) => button.addEventListener("click", () => {
-   compareMode = button.dataset.compareMode;
-   localStorage.setItem("aia-compare-mode", compareMode);
-   render();
- }));
  bindMedicalCompare();
 }
 
