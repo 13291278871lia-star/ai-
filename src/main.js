@@ -455,7 +455,7 @@ function textField(label, id, placeholder, rows = 3) { return `<label class="fie
 
 function home() {
   return appShell(`<section class="page hero"><div><p class="eyebrow">CHOIX · AI WORKBENCH</p><h1>讓每一次會面準備<br>更有把握。</h1><p class="lead">由客戶輪廓出發，連結已批准的保障資料，<br>生成有根據、可覆核的工作草稿。</p><button class="hero-action" data-route="meeting">開啟見客助手 <span>→</span></button></div><div class="hero-badge">2026<br><small>智選工作台</small></div></section>
-  <section class="page dashboard"><div class="section-title"><div><p class="eyebrow">快速開始</p><h2>今天想完成什麼？</h2></div><span class="live-label"><i></i> 已連接示範資料庫</span></div><div class="card-grid">${Object.entries(modules).filter(([id]) => !Object.values(moduleGroups).flat().includes(id)).map(([id, m]) => `<button class="module-card ${m.color}" data-route="${id}"><div class="module-icon">${m.icon}</div><h3>${m.title}</h3><p>${m.subtitle}</p><span>進入工作流程 <b>→</b></span></button>`).join("")}</div>
+  <section class="page dashboard"><div class="section-title"><div><p class="eyebrow">快速開始</p><h2>今天想完成什麼？</h2></div><span class="live-label"><i></i> 已連接示範資料庫</span></div><div class="card-grid">${Object.entries(modules).filter(([id]) => id !== "compare" && !Object.values(moduleGroups).flat().includes(id)).map(([id, m]) => `<button class="module-card ${m.color}" data-route="${id}"><div class="module-icon">${m.icon}</div><h3>${m.title}</h3><p>${m.subtitle}</p><span>進入工作流程 <b>→</b></span></button>`).join("")}</div>
   <div class="principle-grid"><div><span>01</span><h3>資料有根據</h3><p>每項建議均應連結已批准文件、版本與頁碼。</p></div><div><span>02</span><h3>人員作最後判斷</h3><p>AI 提供草稿，不取代持牌人士或主管覆核。</p></div><div><span>03</span><h3>保障私隱</h3><p>只輸入概括、已脫敏的客戶輪廓，不輸入個人資料。</p></div></div></section>`);
 }
 
