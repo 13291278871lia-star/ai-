@@ -1,0 +1,12 @@
+
+
+
+<script type="text/javascript">
+    if(window.location.search.indexOf('errorPageTarget') < 0) {
+        if(window.location.search.length > 0) {
+            window.location.replace(window.location.href+'&errorPageTarget=true');
+        }else {
+            window.location.replace(window.location.href+'?errorPageTarget=true');
+        }
+    }
+</script>

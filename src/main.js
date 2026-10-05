@@ -2,6 +2,7 @@ import {panel as insurancePanel, bind as bindInsurance} from './insurance-ppt.js
 import {panel as salesToolPanel, bind as bindSalesTool} from './sales-tool-legacy.js';
 import {compareSchema} from './compare-schema.js';
 import {panel as medicalComparePanel, bind as bindMedicalCompare} from './medical-compare.js';
+import {syncedMarketFiles, paymentFiles, guideFiles} from './synced-catalog-data.js';
 const modules = {
   salestool: { icon: "✦", title: "銷售工具", subtitle: "上傳計劃書，生成個案PPT", color: "gold" },
   matching: { icon: "◇", title: "會前準備", subtitle: "由客戶輪廓尋找已批准資料", color: "gold" },
@@ -16,20 +17,11 @@ const modules = {
   market: { icon: "◈", title: "市場資訊", subtitle: "同業產品與市場參考資料", color: "blue" },
   promotion: { icon: "✧", title: "產品推廣", subtitle: "查閱產品推廣活動及優惠資料", color: "gold" },
   discontinued: { icon: "⌑", title: "停售產品", subtitle: "已停售產品的歷史參考資料", color: "ink" },
+  payment: { icon: "$", title: "付費", subtitle: "繳費方式與操作指引", color: "gold" },
+  guides: { icon: "▧", title: "指引", subtitle: "核保與賠償申請指引", color: "sage" },
 };
 
-const marketInformationFiles = [
-  ["中國人壽", "傳統壽險", "裕饒傳承儲蓄保險計劃 (資訊更新日期：2020年10月).pdf"], ["中國人壽", "醫療產品", "衛您健康醫療保險計劃 (資訊更新日期：2020年04月).pdf"],
-  ["永明金融", "危疾產品", "永明危疾家康保 (資訊更新日期：2022年05月).pdf"], ["永明金融", "危疾產品", "萬家康尊尚保 及萬家康尊尚保 - 福寶保 (資訊更新日期：2025年11月).pdf"], ["永明金融", "醫療產品", "永明港健康醫療保 (資訊更新日期：2020年04月).pdf"],
-  ["全美", "萬用壽險", "Universal Life 2 (資訊更新日期：2016年07月).pdf"], ["安盛", "危疾產品", "市場產品資訊速遞 – 主要危疾定義之市場比較 (資訊更新日期：2025年07月).pdf"], ["安盛", "投資連繫產品", "盛名 II 整付投資保險計劃 (資訊更新日期：2021年07月)", "盛名 II 整付投資保險計劃 (資訊更新日期：2021年07月).pdf"],
-  ["安盛", "傳統壽險", "豐進儲蓄計劃 - 2年保費繳付期版本 (資訊更新日期：2021年02月).pdf"], ["安盛", "醫療產品", "真智安心醫療保障 (資訊更新日期：2026年05月).pdf"], ["安盛", "醫療產品", "臻尚環球 (資訊更新日期：2026年05月).pdf"], ["安盛", "醫療產品", "AXA 安盛智尊守慧醫療保障 (資訊更新日期：2026年05月).pdf"],
-  ["宏利 (香港)", "危疾產品", "「守護無間危疾保」 及「守護無間危疾保 (保寶未來)」 (資訊更新日期：2022年08月).pdf"], ["宏利 (香港)", "危疾產品", "「守護無間危疾保」之保費比較 (2024年4月) (資訊更新日期：2024年04月).pdf"], ["宏利 (香港)", "危疾產品", "活耀人生危疾保2 及 活耀人生危疾保2(加強版) (資訊更新日期：2020年08月).pdf"], ["宏利 (香港)", "傳統壽險", "創富傳承保障計劃2 (資訊更新日期：2020年11月).pdf"], ["宏利 (香港)", "醫療產品", "宏利晉悅自願醫保靈活計劃 (資訊更新日期：2026年05月).pdf"],
-  ["保柏", "醫療產品", "卓康健, 童康健, 互通保額 (資訊更新日期：2016年10月).pdf"], ["保柏", "醫療產品", "保柏自願醫保計劃 (資訊更新日期：2020年04月).pdf"], ["保柏", "醫療產品", "摰卓 (資訊更新日期：2021年06月).pdf"],
-  ["保誠", "危疾產品", "「誠保一生」危疾保 & 「誠保一生」危疾保 - 摯愛寶 (資訊更新日期：2023年06月）.pdf"], ["保誠", "危疾產品", "「誠保一生」危疾保之保費比較 (2024年4月).pdf"], ["保誠", "危疾產品", "危疾加護保II (資訊更新日期：2020年07月).pdf"], ["保誠", "危疾產品", "危疾加護保III (資訊更新日期：2021年01月).pdf"], ["保誠", "危疾產品", "危疾首護保II (資訊更新日期：2021年06月).pdf"], ["保誠", "傳統壽險", "特級「雋陞」儲蓄保 障計劃 II (資訊更新日期：2020年07月).pdf"],
-  ["恒生", "醫療產品", "摯尚醫療保障計劃 (資訊更新日期：2015年04月).pdf"], ["美國萬通", "醫療產品", "「稅」優惠醫療計劃 (資訊更新日期：2019年04月).pdf"], ["美國萬通", "醫療產品", "癌症全面保 (資訊更新日期：2016年09月).pdf"],
-  ["富衛", "危疾產品", "危疾應援保及危疾應援保 - 童步守護 (資訊更新日期：2025年11月).pdf"], ["富衛", "投資連繫產品", "智非凡II (資訊更新日期：2015年08月).pdf"], ["富衛", "萬用壽險", "愛升息特選理財壽險計劃 (資訊更新日期：2016年09月).pdf"], ["富衛", "醫療產品", "尊衛您醫療計劃 (資訊更新日期：2021年04月).pdf"], ["富衛", "醫療產品", "智適簡自願醫療保險計劃 (資訊更新日期：2020年04月).pdf"], ["富衛", "醫療產品", "衛一 (資訊更新日期：2021年06月).pdf"],
-  ["滙豐", "萬用壽險", "翡翠環球自選萬用壽險 (資訊更新日期：2016年07月).pdf"], ["滙豐", "萬用壽險", "駿富萬用壽險計劃 (資訊更新日期：2015年06月).pdf"],
-];
+const marketInformationFiles = syncedMarketFiles;
 
 const discontinuedFiles = [
   ["「充裕未來」計劃 (BP)", "產品簡報.pdf"], ["「充裕未來」計劃 (BP)", "showdoc.jsp.pdf"], ["「充裕未來」計劃 2 (BP2)", "產品簡報.pdf"], ["「充裕未來」計劃 2 (BP2)", "showdoc.jsp.pdf"], ["「充裕未來」計劃 3 (BP3)", "產品簡報.pdf"], ["「充裕未來」計劃 3 (BP3)", "showdoc.jsp.pdf"], ["「充裕未來•盈尚」(BPV)", "產品簡報.pdf"], ["「充裕未來•盈尚」(BPV)", "showdoc.jsp.pdf"], ["「盈御多元貨幣計劃」(GP)", "產品簡報.pdf"], ["「盈御多元貨幣計劃」(GP)", "showdoc.jsp.pdf"], ["「盈御多元貨幣計劃2」(GP2)", " 產品簡報.pdf"], ["「盈御多元貨幣計劃2」(GP2)", "showdoc.jsp.pdf"],
@@ -432,14 +424,14 @@ function appShell(content) {
   return `<div class="app-shell">
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">A</div><div><strong>AI 工作台</strong><small>内部 MVP · 演示版</small></div></div>
-      <nav>${navItem("home", "⌂", "首頁")}${navGroup("library", ["promotion", "market", "discontinued"])}${navItem("sop", "✓", "新人簽單 SOP")}${navItem("learning", "▶", "內部學習中心")}${navItem("ppt", "▣", "PPT 一鍵生成")}${navItem("salestool", "✦", "銷售工具")}</nav>
+      <nav>${navItem("home", "⌂", "首頁")}${navGroup("library", ["promotion", "market", "discontinued", "payment", "guides"])}${navItem("sop", "✓", "新人簽單 SOP")}${navItem("learning", "▶", "內部學習中心")}${navItem("ppt", "▣", "PPT 一鍵生成")}${navItem("salestool", "✦", "銷售工具")}</nav>
       <div class="sidebar-footer"><span class="status-dot"></span>示範模式<br><small>請勿輸入客戶個人資料</small></div>
     </aside>
     <main class="main"><header class="topbar"><button id="menuButton" class="menu-button">☰</button><div class="notice">此為內部示範版 · 所有輸出均須人工覆核後使用</div><div class="theme-preview" style="display:flex" role="group" aria-label="配色預覽"><span class="theme-label">配色</span><button title="高端商务蓝" class="theme-choice ${uiTheme === "executive-blue" ? "active" : ""}" data-theme-choice="executive-blue">商务蓝</button><button title="高端商务绿" class="theme-choice ${uiTheme === "executive-green" ? "active" : ""}" data-theme-choice="executive-green">商务绿</button><button title="高端象牙白" class="theme-choice ${uiTheme === "executive-white" ? "active" : ""}" data-theme-choice="executive-white">象牙白</button><button title="原始红色系" class="theme-choice ${uiTheme === "classic-red" ? "active" : ""}" data-theme-choice="classic-red">經典紅</button><button title="經典藏藍－啞光金" class="theme-choice ${uiTheme === "navy-gold" ? "active" : ""}" data-theme-choice="navy-gold">藏藍金</button><button title="炭灰黑－暗酒紅－香檳金" class="theme-choice ${uiTheme === "guardian" ? "active" : ""}" data-theme-choice="guardian">炭灰紅</button><button title="現代 Slate 灰藍" class="theme-choice ${uiTheme === "slate" ? "active" : ""}" data-theme-choice="slate">Slate</button><button title="深色模式－黑金尊享" class="theme-choice ${uiTheme === "black-gold" ? "active" : ""}" data-theme-choice="black-gold">黑金</button></div><div class="avatar">演</div></header>${sectionNavigation()}${content}</main>
   </div>`;
 }
 function navItem(id, icon, label) { return `<button class="nav-item ${currentModule === id ? "active" : ""}" data-route="${id}"><span>${icon}</span>${label}</button>`; }
-const moduleGroups = { library: ["promotion", "market", "discontinued"], meeting: ["matching", "question", "practice"] };
+const moduleGroups = { library: ["promotion", "market", "discontinued", "payment", "guides"], meeting: ["matching", "question", "practice"] };
 function navGroup(parent, children) {
   const m = modules[parent];
   return `<div class="nav-group" role="group" aria-label="${m.title}">${navItem(parent, m.icon, m.title)}<div class="nav-children">${children.map(id => navItem(id, modules[id].icon, modules[id].title)).join("")}</div></div>`;
@@ -663,6 +655,18 @@ function market() {
   });
   const sections = [...groups.values()].map(({ company, type, files }) => `<section class="catalog-group"><div><span>${escapeHtml(company)}</span><h2>${escapeHtml(type)}</h2><small>${files.length} 份資料</small></div><div class="catalog-files">${files.map((path) => fileLink("assets/market-info", [company, type, ...path])).join("")}</div></section>`).join("");
   return appShell(`<section class="page page-heading"><p class="eyebrow">市場資訊</p><h1>同業資料，<br>集中作市場參考。</h1><p>共 ${marketInformationFiles.length} 份資料，保留原有公司、產品類別、檔名及資料更新日期。</p></section><section class="page catalog-notice"><b>使用範圍</b><span>只供內部市場研究及培訓參考，不可視作產品建議、銷售文件或最新條款。使用前請自行核實資料日期與來源。</span></section><section class="page catalog-grid">${sections}</section>`);
+}
+
+function payment() {
+  const files = paymentFiles.map((parts) => fileLink("assets/payment", parts)).join("");
+  return appShell(`<section class="page page-heading"><p class="eyebrow">產品資料</p><h1>付費</h1><p>繳費方式與操作指引集中存放，點選即可開啟原始 PDF。</p></section><section class="page catalog-grid"><section class="catalog-group"><div><span>付費資料</span><h2>繳費方式及指引</h2><small>${paymentFiles.length} 份資料</small></div><div class="catalog-files">${files}</div></section></section>`);
+}
+
+function guides() {
+  const groups = new Map();
+  guideFiles.forEach(([category, ...path]) => { if (!groups.has(category)) groups.set(category, []); groups.get(category).push(path); });
+  const sections = [...groups.entries()].map(([category, files]) => `<section class="catalog-group"><div><span>內部指引</span><h2>${escapeHtml(category)}</h2><small>${files.length} 份資料</small></div><div class="catalog-files">${files.map((path) => fileLink("assets/guides", [category, ...path])).join("")}</div></section>`).join("");
+  return appShell(`<section class="page page-heading"><p class="eyebrow">產品資料</p><h1>指引</h1><p>核保與賠償相關資料按類別整理，點選即可開啟原始 PDF。</p></section><section class="page catalog-notice"><b>使用提示</b><span>資料只供內部工作參考，實際個案請以公司最新流程、要求及正式文件為準。</span></section><section class="page catalog-grid">${sections}</section>`);
 }
 
 function discontinued() {
@@ -1017,7 +1021,7 @@ function practice() {
 
 function render() {
  document.documentElement.dataset.theme = getUiTheme();
- const page = { home, salestool, matching, library, compare, market, promotion, discontinued, meeting, sop, learning, ppt, question, practice }[currentModule]();
+ const page = { home, salestool, matching, library, compare, market, promotion, discontinued, payment, guides, meeting, sop, learning, ppt, question, practice }[currentModule]();
  document.querySelector("#app").innerHTML = page;
  document.querySelectorAll("[data-route]").forEach(el => el.addEventListener("click", () => { currentModule = el.dataset.route; render(); }));
  document.querySelectorAll("[data-theme-choice]").forEach((button) => button.addEventListener("click", () => {
