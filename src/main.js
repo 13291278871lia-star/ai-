@@ -447,7 +447,7 @@ function textField(label, id, placeholder, rows = 3) { return `<label class="fie
 
 function home() {
   return appShell(`<section class="page hero"><div><p class="eyebrow">CHOIX · AI WORKBENCH</p><h1>讓每一次會面準備<br>更有把握。</h1><p class="lead">由客戶輪廓出發，連結已批准的保障資料，<br>生成有根據、可覆核的工作草稿。</p><button class="hero-action" data-route="meeting">開啟見客助手 <span>→</span></button></div><div class="hero-badge">2026<br><small>智選工作台</small></div></section>
-  <section class="page dashboard"><div class="section-title"><div><p class="eyebrow">快速開始</p><h2>今天想完成什麼？</h2></div><span class="live-label"><i></i> 已連接示範資料庫</span></div><div class="card-grid">${Object.entries(modules).filter(([id]) => !["compare", "salestool"].includes(id) && !Object.values(moduleGroups).flat().includes(id)).map(([id, m]) => `<button class="module-card ${m.color}" data-route="${id}"><div class="module-icon">${m.icon}</div><h3>${m.title}</h3><p>${m.subtitle}</p><span>進入工作流程 <b>→</b></span></button>`).join("")}</div>
+  <section class="page dashboard"><div class="section-title"><div><p class="eyebrow">快速開始</p><h2>今天想完成什麼？</h2></div><span class="live-label"><i></i> 已連接示範資料庫</span></div><div class="card-grid">${Object.entries(modules).filter(([id]) => !["compare", "salestool", "meeting"].includes(id) && !Object.values(moduleGroups).flat().includes(id)).map(([id, m]) => `<button class="module-card ${m.color}" data-route="${id}"><div class="module-icon">${m.icon}</div><h3>${m.title}</h3><p>${m.subtitle}</p><span>進入工作流程 <b>→</b></span></button>`).join("")}</div>
   <div class="principle-grid"><div><span>01</span><h3>資料有根據</h3><p>每項建議均應連結已批准文件、版本與頁碼。</p></div><div><span>02</span><h3>人員作最後判斷</h3><p>AI 提供草稿，不取代持牌人士或主管覆核。</p></div><div><span>03</span><h3>保障私隱</h3><p>只輸入概括、已脫敏的客戶輪廓，不輸入個人資料。</p></div></div></section>`);
 }
 
@@ -1008,7 +1008,7 @@ function learning() {
  return appShell(`<section class="page learning-hero"><div><p class="eyebrow">內部學習中心 · 高手分享</p><h1>向高手學習，<br>把經驗變成行動。</h1><p>實戰分享、成長課程與天書系列資料</p></div><div class="learning-hero-stats"><div><b>01</b><span>分享影片</span></div><div><b>02</b><span>課程系列</span></div><div><b>03</b><span>天書資料</span></div></div></section><section class="page learning-warning"><b>內部學習材料</b><span>此區只供內部培訓使用，不可轉發客戶或第三方。對客內容仍須以公司最新正式批准文件為準。</span></section><section class="page masters-layout"><div class="master-player"><div class="course-label">高手分享 · 現正播放</div><h2 id="masterVideoTitle">${escapeHtml(firstVideo.title)}</h2><video id="masterVideoPlayer" controls preload="metadata" class="course-video"><source src="${encodeURI(firstVideo.src)}" type="video/mp4">你的瀏覽器未能直接播放此影片。</video><p>從右側課程目錄選擇影片，播放器會自動切換。</p></div><div class="master-catalog"><div class="learning-list-heading"><div><div class="panel-kicker">影片課程</div><h2>高手分享</h2></div><span>60 段影片</span></div>${series}</div></section><section class="page learning-list master-books"><div class="learning-list-heading"><div><div class="panel-kicker">研習資料</div><h2>天書系列</h2><p>按主題整理的內部參考資料，可直接開啟 PDF 閱讀。</p></div><span>3 份資料</span></div>${books}</section><section class="page learning-next"><b>學習提示</b><span>先按系列觀看影片，再使用天書系列整理重點；實際應用前請核對最新正式資料。</span><button class="primary secondary" data-route="sop">前往新人簽單 SOP <span>→</span></button></section>`);
 }
 
-function ppt() { return appShell(insurancePanel()+`<section class="page panel"><details><summary>通用演示大綱（保留原功能）</summary>${textField("主題", "pptTopic", "例如：家庭保障規劃入門", 2)}${formField("頁數", "pptSlides", ["5 頁精簡版", "7 頁標準版", "10 頁詳細版"])}<button class="primary" id="generatePpt">生成 PPT 大綱 ✦</button><div id="pptOutput"></div></details></section>`); }
+function ppt() { return appShell(insurancePanel()); }
 function salestool() { return appShell(salesToolPanel()); }
 
 function question() {
@@ -1037,7 +1037,6 @@ function bindPage() {
  bindSalesTool();
  document.querySelector("#generateMeeting")?.addEventListener("click", generateMeeting);
  document.querySelector("#matchPolicies")?.addEventListener("click", matchPolicies);
- document.querySelector("#generatePpt")?.addEventListener("click", generatePptOutline);
  document.querySelector("#askQuestion")?.addEventListener("click", answerQuestion);
  document.querySelectorAll("[data-question]").forEach(b => b.addEventListener("click", () => { document.querySelector("#userQuestion").value = b.dataset.question; }));
  document.querySelector("#startPractice")?.addEventListener("click", startPractice);
@@ -1123,22 +1122,6 @@ function generateMeeting() {
  const stage = document.querySelector("#clientStage").value, type = document.querySelector("#clientType").value, goal = document.querySelector("#meetingGoal").value;
  document.querySelector("#meetingOutput").innerHTML = `<div class="result"><div class="result-top"><span class="tag">會前準備草稿</span><button class="text-button" id="copyMeeting">複製</button></div><h2>${escapeHtml(goal)}</h2><h3>會面目標</h3><p>在輕鬆、不預設結論的對話中，了解一位${escapeHtml(type)}的關注重點與保障優先次序。</p><h3>建議提問</h3><ol><li>「最近讓您最想為自己或家人多做準備的是什麼？」</li><li>「如果遇到突發情況，您最希望哪些生活安排不受影響？」</li><li>「在保障、預算和彈性之間，您現時最重視哪一項？」</li></ol><h3>溝通流程</h3><p>建立關係 → 了解生活階段（${escapeHtml(stage)}）→ 探索需要 → 總結重點 → 約定下一步。</p><div class="warning">合規提醒：避免保證回報、替客戶作決定或把此草稿視為正式建議。</div></div>`;
  document.querySelector("#copyMeeting").addEventListener("click", () => navigator.clipboard.writeText(document.querySelector("#meetingOutput").innerText));
-}
-
-function makeOutline(topic, count) {
- const all = ["封面｜" + topic, "為什麼現在值得關注", "常見情況與需要", "思考框架：目標、優先次序與預算", "可討論的下一步", "總結與問答", "謝謝"];
- return all.slice(0, count);
-}
-function generatePptOutline() {
- const topic = document.querySelector("#pptTopic").value.trim() || "家庭保障規劃入門";
- const count = Number(document.querySelector("#pptSlides").value.match(/\d+/)[0]); const outline = makeOutline(topic, count);
- document.querySelector("#pptOutput").innerHTML = `<div class="result"><div class="result-top"><span class="tag">${count} 頁大綱</span></div><h2>${escapeHtml(topic)}</h2><ol class="outline">${outline.map((x, i) => `<li><b>${i + 1}.</b> ${escapeHtml(x)}</li>`).join("")}</ol><button class="primary secondary" id="downloadPpt">下載可編輯 PPT ↓</button><p class="tiny">這是示範模板；正式使用前請替換為公司已批准的版式與內容。</p></div>`;
- document.querySelector("#downloadPpt").addEventListener("click", () => downloadPpt(topic, outline));
-}
-async function downloadPpt(topic, outline) {
- const pptx = new PptxGenJS(); pptx.layout = "LAYOUT_WIDE"; pptx.author = "AI 工作台 MVP"; pptx.subject = "演示草稿"; pptx.title = topic; pptx.company = "Internal MVP";
- outline.forEach((item, index) => { const slide = pptx.addSlide(); slide.background = { color: index === 0 ? "B51F2A" : "FAF7F2" }; slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.333, h: 0.18, fill: { color: "D9A441" }, line: { color: "D9A441" } }); slide.addText(index === 0 ? topic : item.replace(/^.*?｜/, ""), { x: 0.8, y: index === 0 ? 2.2 : 0.85, w: 11.7, h: 0.8, fontFace: "Arial", fontSize: index === 0 ? 34 : 26, bold: true, color: index === 0 ? "FFFFFF" : "251F1E", breakLine: false }); slide.addText(index === 0 ? "AI 工作台 · 可编辑演示草稿" : "请按公司审核要求编辑、核实并补充内容。", { x: 0.82, y: index === 0 ? 3.2 : 1.85, w: 10.8, h: 0.5, fontFace: "Arial", fontSize: 15, color: index === 0 ? "F7E6C1" : "6C625E" }); slide.addText(`${index + 1} / ${outline.length}`, { x: 11.8, y: 6.85, w: 0.8, h: 0.25, fontSize: 9, color: "6C625E", align: "right" }); });
- await pptx.writeFile({ fileName: `${topic.replace(/[\\/:*?"<>|]/g, "_")}_MVP草稿.pptx` });
 }
 
 function answerQuestion() {
