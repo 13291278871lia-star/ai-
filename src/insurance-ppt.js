@@ -45,7 +45,7 @@ export function panel() {
  const input=(id,label,value,type='number')=>`<label class="field">${label}<input id="${id}" type="${type}" value="${esc(value)}" step="any" required></label>`;
  // 优惠参数不是计划书内容，不能 required——留空时模版保留占位符。
  const opt=(id,label,value,type='text')=>`<label class="field">${label}<input id="${id}" type="${type}" value="${esc(value)}" ${type==='number'?'step="any"':''}></label>`;
- return `<section class="page page-heading"><p class="eyebrow">PPT 一鍵生成 · 保險方案模版</p><h1>先核對計算，再製作簡報</h1><p>沿用你提供的概覽版式。保單數據、匯率和回報率使用同一套計算結果。</p></section>
+ return `<section class="page page-heading"><p class="eyebrow">PPT 製作 · 保險方案模版</p><h1>先核對計算，再製作簡報</h1><p>沿用你提供的概覽版式。保單數據、匯率和回報率使用同一套計算結果。</p></section>
  <section class="page insurance-reference"><b>已收錄的參考資料</b><a href="/assets/ppt-reference/gf-template.pptx" download>11頁 GF 原始模版 ↓</a><a href="/assets/ppt-reference/irr-sample.xlsx" download>IRR 公式表 ↓</a><a href="/assets/ppt-reference/policy-example.pdf" target="_blank">投保資料 ↗</a><a href="/assets/ppt-reference/layout-example.png" target="_blank">圖一版式 ↗</a></section>
  <section class="page two-column insurance-workspace"><div class="panel"><h2>方案與計算資料</h2><div id="insuranceUpload"></div><button class="text-button" id="loadPolicyExample">載入已核對示例：40歲 · 財富恆裕3</button><form id="insuranceForm">
  ${input('insProduct','保單產品名稱',example.product,'text')}<div class="insurance-fields">${input('insAge','投保時年齡',40)}${input('insPremium','每期保費（美元）',105760)}${input('insYears','供款年數（1＝整付）',1)}${input('insLevy','首期額外支出／徵費（美元）',12.76)}${input('insFx','美元兌人民幣（展示假設）',6.8)}</div>
