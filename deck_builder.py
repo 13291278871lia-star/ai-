@@ -685,3 +685,37 @@ def build_overview_deck(cfg, plan, template_path, keep_scenario_pages=False):
     bio = io.BytesIO()
     prs.save(bio)
     return bio.getvalue()
+
+
+def convert_deck_script(data, config):
+    """Convert editable text in a PPTX between simplified and traditional Chinese."""
+    try:
+        from opencc import OpenCC
+        from pptx import Presentation
+    except ImportError as exc:
+        raise RuntimeError("缺少简繁转换组件，请运行 pip install opencc-python-reimplemented") from exc
+
+    converter = OpenCC(config)
+    prs = Presentation(io.BytesIO(data))
+
+    def convert_shape(shape):
+        if getattr(shape, "shape_type", None) == 6:
+            for child in shape.shapes:
+                convert_shape(child)
+        if getattr(shape, "has_text_frame", False):
+            for paragraph in shape.text_frame.paragraphs:
+                for run in paragraph.runs:
+                    run.text = converter.convert(run.text)
+        if getattr(shape, "has_table", False):
+            for row in shape.table.rows:
+                for cell in row.cells:
+                    for paragraph in cell.text_frame.paragraphs:
+                        for run in paragraph.runs:
+                            run.text = converter.convert(run.text)
+
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            convert_shape(shape)
+    out = io.BytesIO()
+    prs.save(out)
+    return out.getvalue()

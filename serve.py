@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Run the local MVP at http://127.0.0.1:4175."""
+import io
 import json
 import os
 import re
 import unicodedata
+import zipfile
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
@@ -67,6 +69,9 @@ class AppHandler(SimpleHTTPRequestHandler):
         if request.path == "/api/ppt-from-template":
             self.send_template_ppt()
             return
+        if request.path == "/api/ppt-bilingual":
+            self.send_template_ppt(bilingual=True)
+            return
         if request.path == "/api/parse-proposal":
             self.send_parsed_proposal()
             return
@@ -101,7 +106,7 @@ class AppHandler(SimpleHTTPRequestHandler):
             return None
         return template_path if template_path.is_file() else None
 
-    def send_template_ppt(self):
+    def send_template_ppt(self, bilingual=False):
         """Fill the user's GF template (server-side, python-pptx) and return a
         7-page client overview. The browser cannot do this with pptxgenjs
         because that library can only build a deck from scratch, not open an
@@ -166,17 +171,28 @@ class AppHandler(SimpleHTTPRequestHandler):
                 cfg, plan, template_path,
                 keep_scenario_pages=bool(payload.get("keepScenarioPages")),
             )
+            if bilingual:
+                simplified = deck_builder.convert_deck_script(data, "t2s")
+                traditional = deck_builder.convert_deck_script(data, "s2t")
+                archive = io.BytesIO()
+                safe_name = re.sub(r'[\\/:*?"<>|]', '_', str(cfg.get("product") or "overview"))[:60]
+                with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as bundle:
+                    bundle.writestr(f"{safe_name}_概览_简体.pptx", simplified)
+                    bundle.writestr(f"{safe_name}_概览_繁体.pptx", traditional)
+                data = archive.getvalue()
         except Exception as exc:  # surface the real cause to the browser
             self.send_error(500, f"Template build failed: {exc}")
             return
 
         fname = (str(cfg.get("product") or "overview").replace("/", "_"))[:60]
-        disp_name = f"{fname}_概览.pptx"
+        disp_name = f"{fname}_概览_简繁体双版本.zip" if bilingual else f"{fname}_概览.pptx"
         # HTTP headers are latin-1; provide an ASCII fallback plus a UTF-8
         # filename* (RFC 5987) so browsers get the proper Chinese name.
         self.send_response(200)
-        self.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.presentationml.presentation")
-        self.send_header("Content-Disposition", f'attachment; filename="policy_overview.pptx"; filename*=UTF-8\'\'{quote(disp_name)}')
+        content_type = "application/zip" if bilingual else "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        fallback = "policy_overview_bilingual.zip" if bilingual else "policy_overview.pptx"
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Disposition", f'attachment; filename="{fallback}"; filename*=UTF-8\'\'{quote(disp_name)}')
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
