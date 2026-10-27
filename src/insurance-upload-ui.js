@@ -1,4 +1,6 @@
 import {readUpload,mapTable,escapeHtml as esc} from './insurance-import.js';
+const MILESTONES=[20,30,40,50];
+const filterMilestones=rows=>{const ms=rows.filter(r=>MILESTONES.includes(r[0]));return ms.length>=2?ms:rows;};
 export function bindUpload({apply,clear,get,render}){
  const host=document.querySelector('#insuranceUpload');if(!host)return;let upload=null,revision=0;
  host.innerHTML=`<div class="insurance-upload"><h3>上傳 AIA 計劃書，自動製作完整 PPT</h3><label class="field">選擇計劃書 PDF 或其他資料檔<input id="insUploadFile" type="file" accept=".pptx,.pdf,.xlsx,.csv,.tsv,.json"></label><p class="tiny">標準 AIA 計劃書 PDF 會自動解析、完成 13 項校驗並填入 GF 概覽模版；校驗失敗時不會出稿。亦支援 PPTX／Excel／CSV／JSON 手動對應，檔案只在本機工作平台處理。掃描 PDF 需先 OCR。</p><a href="/assets/ppt-reference/import-example.csv" download>下載 CSV 欄位範例</a> · <button type="button" class="text-button" id="saveInsuranceData">儲存當前方案 JSON</button><p id="insUploadStatus" role="status"></p><div id="insUploadMapping"></div></div>`;
@@ -39,7 +41,7 @@ export function bindUpload({apply,clear,get,render}){
      const data=await resp.json();const p=data.profile||{};
      if(data.known&&p.product&&p.age&&p.premium){
       const w=data.withdrawalPlan;
-      apply({product:p.product,age:p.age,premium:p.premium,years:p.years||1,levy:p.levy??0,fx:p.fx||6.8,source:`${file.name} · 後端自動解析（${data.rowCount}個年度）`,rows:data.rows,proposal:data});
+      apply({product:p.product,age:p.age,premium:p.premium,years:p.years||1,levy:p.levy??0,fx:p.fx||6.8,source:`${file.name} · 後端自動解析（${data.rowCount}個年度）`,rows:filterMilestones(data.rows),proposal:data});
       status([`✅ 已自動辨識 AIA 計劃書，套用 ${data.rowCount} 個年度數據。`,
        w?`識別到提取方案：${w.startAge}–${w.endAge}歲每年 ${Number(w.annual).toLocaleString('en-US')} ×${w.count}年${w.residual?`，${w.residualAge}歲剩餘 ${Number(w.residual).toLocaleString('en-US')}`:''}（建議書第${(w.page||[]).join('、')}頁）。`:'計劃書沒有「現金提取舉例」，第2頁提取概覽會自動省略。',
        '正在执行13项校验并生成7页概览 PPT…'].join('\n'));
