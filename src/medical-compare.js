@@ -7,6 +7,7 @@
    AIA 產品對比中心 — 互動邏輯
    ========================================================================== */
 import {medicalDb as DB} from './medical-compare-data.js';
+import {comparisonCaseLibrary} from './comparison-case-data.js';
 
 /* 由平台 main.js 於 render() 後呼叫 bind()；掛載點為 .mc-root */
 let root = null;
@@ -23,6 +24,9 @@ let root = null;
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const state = {
+    series: 'tax',
+    caseId: 'tax-selectwise',
+    caseTab: 'overview',
     tab: 'overview',
     compare: ['AVSW', 'SWP'],
     marketCols: { aia: true, prx: true, manx: true, axx: true },
@@ -36,6 +40,101 @@ let root = null;
     qRow: 0,
     qRes: 0
   };
+
+  function currentSeries() {
+    return comparisonCaseLibrary.find(series => series.id === state.series) || comparisonCaseLibrary[0];
+  }
+
+  function currentCase() {
+    const series = currentSeries();
+    return series.cases.find(item => item.id === state.caseId) || series.cases[0];
+  }
+
+  function renderCaseNavigation() {
+    const series = currentSeries();
+    $('#caseSeriesPicker').innerHTML = comparisonCaseLibrary.map(item =>
+      `<button type="button" class="${item.id === series.id ? 'active' : ''}" data-series="${esc(item.id)}"><b>${esc(item.label)}</b><span>${esc(item.description)}</span></button>`
+    ).join('');
+    $('#casePicker').innerHTML = series.cases.map((item, index) =>
+      `<button type="button" class="${item.id === state.caseId ? 'active' : ''}" data-case="${esc(item.id)}" title="${esc(item.label)}">${item.legacy ? `<span>${String(index + 1).padStart(2, '0')}</span>` : ''}${esc(item.label)}</button>`
+    ).join('');
+    const files = currentCase().sourceFiles || [];
+    $('#caseSourceFiles').innerHTML = files.length ? `<span>資料來源 PDF</span>${files.map(file =>
+      `<a href="${esc(file[1])}" target="_blank" rel="noopener"><b>PDF</b><em>${esc(file[0])}</em><i>開啟 ↗</i></a>`
+    ).join('')}` : '<span>資料來源 PDF</span><small>暫未上傳來源文件</small>';
+
+    $$('#caseSeriesPicker [data-series]').forEach(button => button.addEventListener('click', () => {
+      state.series = button.dataset.series;
+      state.caseId = currentSeries().cases[0].id;
+      state.caseTab = 'overview';
+      renderCaseNavigation();
+      renderCaseView();
+    }));
+    $$('#casePicker [data-case]').forEach(button => button.addEventListener('click', () => {
+      state.caseId = button.dataset.case;
+      state.caseTab = 'overview';
+      renderCaseNavigation();
+      renderCaseView();
+    }));
+  }
+
+  const CASE_TABS = [
+    ['overview', '產品速覽與特色'],
+    ['lineup', '內部產品定位'],
+    ['market', '市場特性比較'],
+    ['premium', '保費比較'],
+    ['elig', '國籍及居住地資格'],
+    ['advisor', '智能推薦（客戶畫像）']
+  ];
+
+  function rowsForCaseTab(item) {
+    const rules = {
+      lineup: /定位|版本|性質|結構|類別|目標客群/,
+      market: /保障|地域|病房|癌症|復康|索償|服務|賠償|治療|特色|比較方式|文件列示重點|使用限制/,
+      premium: /保費|自付費|回報|回本|年金|供款|繳費|扣稅/,
+      elig: /投保|年齡|地域|資格|年期|開始年齡|居住地|國籍/
+    };
+    if (state.caseTab === 'overview') return item.rows;
+    const rule = rules[state.caseTab];
+    return rule ? item.rows.filter(row => rule.test(row[0])) : [];
+  }
+
+  function sourceCards(item) {
+    const files = item.sourceFiles || [];
+    if (!files.length) return '<p>資料暫未提供</p>';
+    return `<div class="mc-source-grid">${files.map(file => `<a class="mc-source-file" href="${esc(file[1])}" target="_blank" rel="noopener"><b>PDF</b><span>${esc(file[0])}</span><i>開啟文件 ↗</i></a>`).join('')}</div>`;
+  }
+
+  function renderStructuredCase() {
+    const item = currentCase();
+    const host = $('#caseContent');
+    const headings = item.products.map(product => `<th class="prod-head"><div class="ph-co">${esc(product)}</div></th>`).join('');
+    const selectedRows = rowsForCaseTab(item);
+    const rows = selectedRows.map(row => `<tr><th>${esc(row[0])}</th>${row.slice(1).map(value => `<td>${esc(value || '資料暫未提供')}</td>`).join('')}</tr>`).join('');
+    const activeLabel = CASE_TABS.find(tab => tab[0] === state.caseTab)?.[1] || CASE_TABS[0][1];
+    const tabs = CASE_TABS.map((tab, index) => `<button type="button" class="mc-tab ${tab[0] === state.caseTab ? 'active' : ''}" data-case-tab="${tab[0]}"><span class="mc-tab-idx">${String(index + 1).padStart(2, '0')}</span>${tab[1]}</button>`).join('');
+    const table = selectedRows.length
+      ? `<section class="mc-card"><div class="mc-card-head"><h3>${esc(activeLabel)}</h3><span class="mc-page-tag">按文件分類</span></div><div class="mc-table-scroll"><table class="mc-cmp"><thead><tr><th>比較項目</th>${headings}</tr></thead><tbody>${rows}</tbody></table></div></section>`
+      : `<section class="mc-card"><div class="mc-card-head"><h3>${esc(activeLabel)}</h3></div><div class="mc-card-body"><p class="mc-empty-note">目前來源文件未有明確列出此部分的可比較資料。</p></div></section>`;
+    const advisor = state.caseTab === 'advisor' ? `<section class="mc-case-grid"><article class="mc-card"><div class="mc-card-head"><h3>產品重點</h3></div><div class="mc-card-body"><ul class="mc-case-list">${item.highlights.map(point => `<li>${esc(point)}</li>`).join('')}</ul></div></article><article class="mc-card"><div class="mc-card-head"><h3>使用注意</h3></div><div class="mc-card-body"><ul class="mc-case-list">${item.cautions.map(point => `<li>${esc(point)}</li>`).join('')}</ul></div></article></section>` : '';
+    host.innerHTML = `<div class="mc-bar mc-case-bar"><div class="mc-bar-left"><span class="mc-src">${esc(item.source)}</span></div><div class="mc-bar-right"><button type="button" class="mc-btn" data-case-print>列印／存成 PDF</button><span class="mc-internal">● 只供內部使用 · For AIA Internal Use Only</span></div></div>
+      <nav class="mc-tabs mc-case-tabs">${tabs}</nav>
+      <section class="mc-case-heading"><p>${esc(currentSeries().label)} · ${esc(item.type)}</p><h2><span class="mc-bar-accent"></span>${esc(item.title)}</h2><small>資料按原始文件提取；沒有明載的內容保留為「資料暫未提供」。</small></section>
+      ${table}${advisor}
+      <section class="mc-card mc-case-source"><div class="mc-card-head"><h3>資料來源 PDF</h3></div><div class="mc-card-body">${sourceCards(item)}</div></section>`;
+    $('[data-case-print]', host).addEventListener('click', () => window.print());
+    $$('[data-case-tab]', host).forEach(button => button.addEventListener('click', () => {
+      state.caseTab = button.dataset.caseTab;
+      renderStructuredCase();
+    }));
+  }
+
+  function renderCaseView() {
+    const legacy = Boolean(currentCase().legacy);
+    $('#legacyCompare').hidden = !legacy;
+    $('#caseContent').hidden = legacy;
+    if (!legacy) renderStructuredCase();
+  }
 
   /* ---------------- Tab 切換 ---------------- */
   function initTabs() {
@@ -111,14 +210,14 @@ let root = null;
 
   function renderTray() {
     const tray = $('#tray');
-    const names = state.compare.map(id => {
+    const products = state.compare.map(id => {
       const p = allInternal().find(x => x.code === id);
-      return p ? p.code : id;
+      return { code: id, name: p ? p.name : id };
     });
-    if (!names.length) { tray.classList.remove('show'); return; }
+    if (!products.length) { tray.classList.remove('show'); return; }
     tray.classList.add('show');
-    $('#trayItems').innerHTML = names.map(n =>
-      `<span class="t-item">${esc(n)}<button data-rm="${esc(n)}" title="移除">×</button></span>`).join('');
+    $('#trayItems').innerHTML = products.map(p =>
+      `<span class="t-item">${esc(p.name)}<button data-rm="${esc(p.code)}" title="移除${esc(p.name)}">×</button></span>`).join('');
     $$('#trayItems [data-rm]').forEach(b => {
       b.addEventListener('click', () => {
         const i = state.compare.indexOf(b.dataset.rm);
@@ -162,7 +261,6 @@ let root = null;
       let html = '<thead><tr><th>比較項目</th>' +
         products.map(p => `<th class="prod-head ${p.hero ? 'col-aia' : ''}">
             <div class="ph-co">${esc(p.name)}</div>
-            <div class="ph-pd">${esc(p.code)}</div>
             <div class="ph-meta">${esc(p.target)}</div>
           </th>`).join('') + '</tr></thead><tbody>';
 
@@ -185,9 +283,9 @@ let root = null;
     // 產品選擇器
     const box = $('#lineupPicker');
     box.innerHTML = allInternal().map(p =>
-      `<label class="switch" style="font-size:12px;">
+      `<label class="switch" style="font-size:12px;" title="${esc(p.name)}">
          <input type="checkbox" data-code="${esc(p.code)}" ${state.compare.indexOf(p.code) > -1 ? 'checked' : ''}>
-         ${esc(p.code)}
+         ${esc(p.name)}
        </label>`).join('');
     $$('#lineupPicker input').forEach(cb => {
       cb.addEventListener('change', () => {
@@ -458,7 +556,7 @@ let root = null;
   function initEligControls() {
     const seg = $('#eligPlanSeg');
     seg.innerHTML = DB.eligibility.plans.map(p =>
-      `<button data-plan="${esc(p.id)}">${esc(p.short)}</button>`).join('');
+      `<button data-plan="${esc(p.id)}">${esc(p.name)}</button>`).join('');
     $$('#eligPlanSeg button').forEach((b, i) => {
       b.addEventListener('click', () => {
         state.eligPlan = b.dataset.plan;
@@ -600,7 +698,7 @@ let root = null;
       return { drop: '投保年齡為 ' + p.minAge + '–' + p.maxAge + ' 歲，客戶 ' + ctx.age + ' 歲不合資格' };
     }
     if (p.code === 'AVSW' && !ctx.hkId) return { drop: '須持有香港／澳門居民身份證' };
-    if (p.code === 'SWP' && ctx.hkId) return { drop: '客戶持有港澳居民身份證，應選 AVSW' };
+    if (p.code === 'SWP' && ctx.hkId) return { drop: '客戶持有港澳居民身份證，應選 AIA 自願醫保睿選計劃' };
     if (!ctx.hkId && p.needs.indexOf('vhis') > -1) {
       return { drop: '自願醫保計劃只供香港／澳門居民身份證持有人投保' };
     }
@@ -675,8 +773,8 @@ let root = null;
     /* —— 資格警示條 —— */
     const bar = $('#advEligBar');
     const place = DB.eligibility.residences[ADV.residence];
-    const planName = ctxBase.id.plan === 'swp' ? '「睿選明珠」醫療計劃 (SWP)'
-      : ctxBase.id.plan === 'student' ? '海外留學生安排' : 'AIA 自願醫保睿選計劃 (AVSW)';
+    const planName = ctxBase.id.plan === 'swp' ? '「睿選明珠」醫療計劃'
+      : ctxBase.id.plan === 'student' ? '海外留學生安排' : 'AIA 自願醫保睿選計劃';
     let cls = 'bad', title, sub;
     if (ctxBase.ok) {
       cls = 'ok';
@@ -726,7 +824,7 @@ let root = null;
       if (heroIdx > 0) {
         const hs = scored[heroIdx];
         const hd = el('div', 'adv-hero-note');
-        hd.innerHTML = `<b>主推產品 ${esc(heroCode)}（${esc(hs.p.name)}）</b>：配對度 ${hs.r.score}/100，排名第 ${heroIdx + 1}，
+        hd.innerHTML = `<b>主推產品：${esc(hs.p.name)}</b>：配對度 ${hs.r.score}/100，排名第 ${heroIdx + 1}，
           估算年繳保費 HK$${fmt(hs.r.prem)}（自付費 ${fmt(parseInt(resolveDed(ADV.age, ADV.budget), 10))} 港元）。
           ${hs.r.overBudget ? '已超出客戶預算上限，可調高自付費檔或與客戶確認預算。' : '於市場特性比較 47 個項目中佔優 40 項（P.54-66）。'}`;
         host.appendChild(hd);
@@ -740,7 +838,7 @@ let root = null;
           <div class="rec-head">
             <div class="rec-rank">${i + 1}</div>
             <div class="rec-name">
-              <h4>${esc(p.name)}<span class="code">${esc(p.code)}</span><span class="grp">${esc(p.group)}</span>
+              <h4>${esc(p.name)}<span class="grp">${esc(p.group)}</span>
                 ${p.riderOnly ? '<span class="code flag">只可作附加契約</span>' : ''}
                 ${p.supplement ? '<span class="code flag">補充保障</span>' : ''}
               </h4>
@@ -806,7 +904,7 @@ let root = null;
         const o = el('div', 'adv-others');
         o.innerHTML = '<div class="o-title">其他可考慮方案</div>' + rest.map(s =>
           `<div class="o-row">
-             <span class="o-name">${esc(s.p.name)} <span style="color:#7b8794">(${esc(s.p.code)})</span></span>
+             <span class="o-name">${esc(s.p.name)}</span>
              <span class="o-price">HK$${fmt(s.r.prem)}</span>
              <span class="o-pct">${s.r.score}</span>
            </div>`).join('');
@@ -816,7 +914,7 @@ let root = null;
       if (dropped.length) {
         const d = el('div', 'adv-others');
         d.innerHTML = '<div class="o-title">未納入推薦</div>' + dropped.map(x =>
-          `<div class="o-row"><span class="o-name" style="color:var(--ink-3)">${esc(x.p.name)}（${esc(x.p.code)}） — ${esc(x.why)}</span></div>`).join('');
+          `<div class="o-row"><span class="o-name" style="color:var(--ink-3)">${esc(x.p.name)} — ${esc(x.why)}</span></div>`).join('');
         host.appendChild(d);
       }
     }
@@ -862,8 +960,8 @@ let root = null;
     const v = aiaPremAt(code, auto, ADV.age);
     $('#advPlanNote').textContent =
       (code === 'SWP'
-        ? '「睿選明珠」之保費按 AVSW 保費比較表（P.67-71）乘以 1.10 估算（依 P.5-8 兩者 40 歲基準保費 17,048 ÷ 15,496 推導）。'
-        : 'AVSW 保費取自保費比較表（P.67-71）基本計劃，並於表列年齡之間以線性插值估算。') +
+        ? '「睿選明珠」醫療計劃之保費按「AIA 自願醫保睿選計劃」保費比較表（P.67-71）乘以 1.10 估算（依 P.5-8 兩者 40 歲基準保費 17,048 ÷ 15,496 推導）。'
+        : '「AIA 自願醫保睿選計劃」保費取自保費比較表（P.67-71）基本計劃，並於表列年齡之間以線性插值估算。') +
       ' 基本計劃、' + ADV.age + ' 歲、未計保監局徵費及 AIA Vitality 首年折扣。' +
       (v > ADV.budget ? '目前預算下所有檔位均超出上限，建議與客戶確認可承擔的自付費金額。' : '');
   }
@@ -871,10 +969,11 @@ let root = null;
   /* 市場保費參考 */
   function renderAdvMarket(elig) {
     const code = elig.hkId ? 'AVSW' : 'SWP';
+    const productName = code === 'AVSW' ? 'AIA 自願醫保睿選計劃' : '「睿選明珠」醫療計劃';
     const host = $('#advMarket');
     if (!elig.ok) {
       host.innerHTML = '<div style="font-size:12.5px;color:var(--ink-3)">' +
-        '此客戶畫像不獲「' + esc(code) + '」接受，故不提供市場保費比較。可先於「04 保費比較」選定其他自付費檔查看。</div>';
+        '此客戶畫像不獲「' + esc(productName) + '」接受，故不提供市場保費比較。可先於「04 保費比較」選定其他自付費檔查看。</div>';
       return;
     }
     const ded = resolveDed(ADV.age, ADV.budget);
@@ -889,7 +988,7 @@ let root = null;
     host.innerHTML =
       `<div style="font-size:12.5px;color:var(--ink-2);margin-bottom:8px;">
         自付費 <b>${esc(ded === '0' ? '0' : fmt(parseInt(ded, 10)))} 港元</b>、基本計劃、${ADV.age} 歲：
-        AIA ${esc(code)} 估算年繳保費 <b>HK$${fmt(aia)}</b>。
+        ${esc(productName)}估算年繳保費 <b>HK$${fmt(aia)}</b>。
         下表為競爭對手同類計劃（基本計劃）比較，綠色「AIA 低」表示 AIA 較便宜。
       </div>` +
       rows.map(r =>
@@ -1009,7 +1108,7 @@ let root = null;
       ''
     ];
     scored.slice(0, 3).forEach((s, i) => {
-      lines.push((i + 1) + '. ' + s.p.name + '（' + s.p.code + '）— 配對度 ' + s.r.score + '/100');
+      lines.push((i + 1) + '. ' + s.p.name + ' — 配對度 ' + s.r.score + '/100');
       lines.push('   估算年繳保費：HK$' + fmt(s.r.prem) + '（佔預算 ' + s.r.pctOfBudget + '%）');
       lines.push('   賣點：' + s.p.fit);
       lines.push('   注意：' + s.p.watch);
@@ -1042,6 +1141,7 @@ let root = null;
 
   /* ---------------- 初始化 ---------------- */
   function init() {
+    renderCaseNavigation();
     $('#srcNote').textContent = DB.meta.source + '｜' + DB.meta.updated;
     $('#footDisc').textContent = DB.meta.disclaimer;
 
@@ -1071,6 +1171,7 @@ let root = null;
       renderOverview(); renderLineup(); renderTray();
       $$('#lineupPicker input').forEach(cb => { cb.checked = false; });
     });
+    renderCaseView();
   }
 
 
@@ -1079,6 +1180,13 @@ let root = null;
    -------------------------------------------------------------------------- */
 export function panel() {
   return `<div class="mc-root">
+  <section class="mc-case-nav">
+    <div class="mc-case-nav-head"><span>產品對比案例</span><small>按產品類別與原始文件查看</small></div>
+    <div class="mc-case-series" id="caseSeriesPicker"></div>
+    <div class="mc-case-picker" id="casePicker"></div>
+    <div class="mc-case-files" id="caseSourceFiles"></div>
+  </section>
+  <div id="legacyCompare">
   <div class="mc-bar">
     <div class="mc-bar-left">
       <span class="mc-src" id="srcNote"></span>
@@ -1116,7 +1224,7 @@ export function panel() {
   <section class="mc-view" id="view-lineup">
     <div class="mc-head">
       <h2><span class="mc-bar-accent"></span>內部產品定位：自家產品線並排比較</h2>
-      <p>資料來源：內部產品定位 P.5–8。勾選產品代號即可加入／移除對比；保費為基本計劃、40 歲男性（非吸煙人士）、標準核保結果（截至 2025 年 10 月）。</p>
+      <p>資料來源：內部產品定位 P.5–8。勾選中文產品名稱即可加入／移除對比；保費為基本計劃、40 歲男性（非吸煙人士）、標準核保結果（截至 2025 年 10 月）。</p>
     </div>
     <div class="mc-card">
       <div class="mc-controls">
@@ -1230,7 +1338,7 @@ export function panel() {
             <div class="mc-quick-row" id="advBudgetQuick"></div>
           </div>
           <div class="mc-field">
-            <label>自付費取向（適用 AVSW／SWP）</label>
+            <label>自付費取向（適用「AIA 自願醫保睿選計劃」／「睿選明珠」醫療計劃）</label>
             <select id="advDed">
               <option value="auto">自動：在預算內選最低自付費</option>
               <option value="0">0 港元</option>
@@ -1290,6 +1398,8 @@ export function panel() {
     <button type="button" class="mc-btn mc-btn-primary" id="trayGo">查看並排比較</button>
     <button type="button" class="mc-btn mc-btn-ghost" id="trayClear">清空</button>
   </div>
+  </div>
+  <section id="caseContent" class="mc-case-content" hidden></section>
 </div>`;
 }
 

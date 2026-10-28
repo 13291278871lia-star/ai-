@@ -37,7 +37,11 @@ def _clean(text):
     return (text or "").replace("（", "(").replace("）", ")").replace("：", ":")
 
 
-# 詳細說明 / 現金提取後 row: age year premium A B C total
+# 詳細說明有兩種常見欄位：
+# 儲蓄計劃：age year premium A B C surrender_total D E F G death_total
+# 較簡版式：age year premium A B surrender_total C D death_total
+# ROW_9 只用來先確認行首；實際退保欄位由數字數量判斷，避免把身故保障
+# 欄誤當成退保總額，或把已經是總額的欄位再次相加。
 ROW_9 = re.compile(rf"^(\d{{1,3}})\s+(\d{{1,3}})\s+({NUM})\s+({NUM})\s+({NUM})\s+({NUM})\s+({NUM})(?:\s|$)")
 # 說明摘要 row (no age column): year premium A B C total
 ROW_8 = re.compile(rf"^(\d{{1,3}})\s+({NUM})\s+({NUM})\s+({NUM})\s+({NUM})\s+({NUM})(?:\s|$)")
@@ -165,12 +169,21 @@ def parse_proposal(file_bytes):
                     m = ROW_9.match(ln)
                     if not m:
                         continue
-                    age, year, premium, a, b, c, total = (
-                        int(m.group(1)), int(m.group(2)), _num(m.group(3)),
-                        _num(m.group(4)), _num(m.group(5)), _num(m.group(6)), _num(m.group(7)),
-                    )
+                    nums = re.findall(NUM, ln)
+                    age, year, premium = int(_num(nums[0])), int(_num(nums[1])), _num(nums[2])
+                    if len(nums) >= 12:
+                        # AIA 儲蓄計劃：A、B、C、(A+B+C)，之後才是身故賠償欄。
+                        a, b, c, total = _num(nums[3]), _num(nums[4]), _num(nums[5]), _num(nums[6])
+                    elif len(nums) >= 9:
+                        # 財富恆裕等較簡版式：A、B、(A+B)，之後是身故賠償欄。
+                        a, b, c, total = _num(nums[3]), _num(nums[4]), 0.0, _num(nums[5])
+                    else:
+                        a, b, c, total = (_num(m.group(4)), _num(m.group(5)),
+                                          _num(m.group(6)), _num(m.group(7)))
                     if not (1 <= year <= 120) or total <= 0:
                         continue
+                    if abs((a + b + c) - total) > max(1.0, total * 1e-6):
+                        warnings.append(f"第{year}年退保分項與總額不一致，已保留建議書列示總額")
                     detail[year] = {
                         "year": year, "age": age, "premiumPaid": premium,
                         "guaranteed": a, "reversionary": b, "terminal": c, "total": total,
@@ -228,9 +241,8 @@ def parse_proposal(file_bytes):
                         break
 
         # The AIA 詳細說明 table is the single source of truth for cash values.
-        # Column 2 is every non-guaranteed dollar (復歸紅利 + 終期分紅): the
-        # browser model reconstructs the total as guaranteed + non-guaranteed,
-        # so dropping 終期分紅 here would understate the chart by a lot.
+        # Browser rows carry guarantee + all non-guaranteed surrender value;
+        # death-benefit columns are deliberately excluded.
         rows = [
             [y, detail[y]["guaranteed"], detail[y]["reversionary"] + detail[y]["terminal"]]
             for y in sorted(detail)
@@ -256,7 +268,6 @@ def parse_proposal(file_bytes):
                 "page": sorted(set(source_pages.get("withdrawal", [])))[:2],
             }
 
-        meta["fx"] = 6.8
         if not detail:
             warnings.append("未找到「詳細說明」逐年退保價值表")
         if not meta.get("product"):

@@ -3,10 +3,12 @@ import {panel as salesToolPanel, bind as bindSalesTool} from './sales-tool-legac
 import {compareSchema} from './compare-schema.js';
 import {panel as medicalComparePanel, bind as bindMedicalCompare} from './medical-compare.js';
 import {syncedMarketFiles, paymentFiles, guideFiles} from './synced-catalog-data.js';
+import {masterVideoSeries} from './training-video-data.js?v=20261013-title-slash';
 const modules = {
   salestool: { icon: "✦", title: "銷售工具", subtitle: "上傳計劃書，生成個案PPT", color: "gold" },
   matching: { icon: "◇", title: "會前準備", subtitle: "由客戶輪廓尋找已批准資料", color: "gold" },
   library: { icon: "▤", title: "產品資料", subtitle: "按產品類別查閱已批准資料", color: "wine" },
+  claims: { icon: "✚", title: "理賠", subtitle: "理賠流程、表格與實務資料", color: "coral" },
   compare: { icon: "⇄", title: "產品對比", subtitle: "產品對比中心與資料庫產品對比", color: "teal" },
   meeting: { icon: "◎", title: "見客助手", subtitle: "3 分鐘整理會前準備", color: "teal" },
   ppt: { icon: "▣", title: "PPT 製作", subtitle: "生成可編輯演示文稿", color: "coral" },
@@ -423,14 +425,14 @@ function appShell(content) {
   return `<div class="app-shell">
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">A</div><div><strong>AI 工作台</strong><small>内部 MVP · 演示版</small></div></div>
-      <nav>${navItem("home", "⌂", "首頁")}${navGroup("library", ["promotion", "market", "discontinued", "payment", "guides", "compare"])}${navItem("sop", "✓", "新人簽單 SOP")}${navItem("learning", "▶", "內部學習中心")}${navItem("ppt", "▣", "PPT 製作")}</nav>
+      <nav>${navItem("home", "⌂", "首頁")}${navGroup("library", ["promotion", "market", "discontinued", "payment", "guides", "claims", "compare"])}${navItem("sop", "✓", "新人簽單 SOP")}${navItem("learning", "▶", "內部學習中心")}${navItem("ppt", "▣", "PPT 製作")}</nav>
       <div class="sidebar-footer"><span class="status-dot"></span>示範模式<br><small>請勿輸入客戶個人資料</small></div>
     </aside>
     <main class="main"><header class="topbar"><button id="menuButton" class="menu-button">☰</button><div class="notice">此為內部示範版 · 所有輸出均須人工覆核後使用</div><div class="theme-preview" style="display:flex" role="group" aria-label="配色預覽"><span class="theme-label">配色</span><button title="高端商务蓝" class="theme-choice ${uiTheme === "executive-blue" ? "active" : ""}" data-theme-choice="executive-blue">商务蓝</button><button title="高端商务绿" class="theme-choice ${uiTheme === "executive-green" ? "active" : ""}" data-theme-choice="executive-green">商务绿</button><button title="高端象牙白" class="theme-choice ${uiTheme === "executive-white" ? "active" : ""}" data-theme-choice="executive-white">象牙白</button><button title="原始红色系" class="theme-choice ${uiTheme === "classic-red" ? "active" : ""}" data-theme-choice="classic-red">經典紅</button><button title="經典藏藍－啞光金" class="theme-choice ${uiTheme === "navy-gold" ? "active" : ""}" data-theme-choice="navy-gold">藏藍金</button><button title="炭灰黑－暗酒紅－香檳金" class="theme-choice ${uiTheme === "guardian" ? "active" : ""}" data-theme-choice="guardian">炭灰紅</button><button title="現代 Slate 灰藍" class="theme-choice ${uiTheme === "slate" ? "active" : ""}" data-theme-choice="slate">Slate</button><button title="深色模式－黑金尊享" class="theme-choice ${uiTheme === "black-gold" ? "active" : ""}" data-theme-choice="black-gold">黑金</button></div><div class="avatar">演</div></header>${sectionNavigation()}${content}</main>
   </div>`;
 }
 function navItem(id, icon, label) { return `<button class="nav-item ${currentModule === id ? "active" : ""}" data-route="${id}"><span>${icon}</span>${label}</button>`; }
-const moduleGroups = { library: ["promotion", "market", "discontinued", "payment", "guides", "compare"], meeting: ["matching", "question", "practice"] };
+const moduleGroups = { library: ["promotion", "market", "discontinued", "payment", "guides", "claims", "compare"], meeting: ["matching", "question", "practice"] };
 function navGroup(parent, children) {
   const m = modules[parent];
   return `<div class="nav-group" role="group" aria-label="${m.title}">${navItem(parent, m.icon, m.title)}<div class="nav-children">${children.map(id => navItem(id, modules[id].icon, modules[id].title)).join("")}</div></div>`;
@@ -479,7 +481,7 @@ function library() {
 }
 
 function medicalComparePage() {
- return appShell(`<section class="page page-heading"><p class="eyebrow">產品對比</p><h1>產品對比</h1><p>依內部產品資料冊整理：產品速覽、內部產品定位、市場特性比較、保費比較、國籍及居住地資格，以及按客戶畫像的智能推薦。所有數字均標示資料來源頁碼。</p></section><section class="page">${medicalComparePanel()}</section>`);
+ return appShell(`<section class="page page-heading"><p class="eyebrow">產品對比</p><h1>產品對比</h1><p>已按原始文件夾整理 10 個產品品類及 107 份 PDF。每組案例均按來源文件提取可核對資料；未有明載的內容保留為「資料暫未提供」，不作推斷。睿選／睿選明珠完整案例歸入「友扣稅」。</p></section><section class="page">${medicalComparePanel()}</section>`);
 }
 
 function compare() {
@@ -632,15 +634,42 @@ function promotion() {
 }
 
 function market() {
-  const groups = new Map();
+  const companies = new Map();
   marketInformationFiles.forEach((entry) => {
     const [company, type, ...path] = entry;
-    const key = `${company}｜${type}`;
-    if (!groups.has(key)) groups.set(key, { company, type, files: [] });
-    groups.get(key).files.push(path);
+    if (!companies.has(company)) companies.set(company, { count: 0, types: new Map() });
+    const companyGroup = companies.get(company);
+    companyGroup.count += 1;
+    if (!companyGroup.types.has(type)) companyGroup.types.set(type, []);
+    companyGroup.types.get(type).push(path);
   });
-  const sections = [...groups.values()].map(({ company, type, files }) => `<section class="catalog-group"><div><span>${escapeHtml(company)}</span><h2>${escapeHtml(type)}</h2><small>${files.length} 份資料</small></div><div class="catalog-files">${files.map((path) => fileLink("assets/market-info", [company, type, ...path])).join("")}</div></section>`).join("");
-  return appShell(`<section class="page page-heading"><p class="eyebrow">市場資訊</p><h1>同業資料，<br>集中作市場參考。</h1><p>共 ${marketInformationFiles.length} 份資料，保留原有公司、產品類別、檔名及資料更新日期。</p></section><section class="page catalog-notice"><b>使用範圍</b><span>只供內部市場研究及培訓參考，不可視作產品建議、銷售文件或最新條款。使用前請自行核實資料日期與來源。</span></section><section class="page catalog-grid">${sections}</section>`);
+
+  const buildTree = (paths) => {
+    const root = { files: [], folders: new Map(), count: 0 };
+    paths.forEach((parts) => {
+      let node = root;
+      node.count += 1;
+      parts.slice(0, -1).forEach((folder) => {
+        if (!node.folders.has(folder)) node.folders.set(folder, { files: [], folders: new Map(), count: 0 });
+        node = node.folders.get(folder);
+        node.count += 1;
+      });
+      node.files.push(parts.at(-1));
+    });
+    return root;
+  };
+
+  const renderTree = (node, baseParts, level = 0) => {
+    const directFiles = node.files.length ? `<div class="catalog-files market-direct-files">${node.files.map((filename) => fileLink("assets/market-info", [...baseParts, filename])).join("")}</div>` : "";
+    const folders = [...node.folders.entries()].map(([folder, child]) => `<details class="market-folder" data-level="${level}"><summary><span>${escapeHtml(folder)}</span><small>${child.count} 份</small></summary><div class="market-folder-body">${renderTree(child, [...baseParts, folder], level + 1)}</div></details>`).join("");
+    return `${directFiles}${folders}`;
+  };
+
+  const sections = [...companies.entries()].map(([company, companyGroup]) => {
+    const types = [...companyGroup.types.entries()].map(([type, paths]) => `<details class="market-type"><summary><span>${escapeHtml(type)}</span><small>${paths.length} 份資料</small></summary><div class="market-type-body">${renderTree(buildTree(paths), [company, type])}</div></details>`).join("");
+    return `<details class="market-company"><summary><div><span>保險公司</span><h2>${escapeHtml(company)}</h2></div><div class="market-company-meta"><b>${companyGroup.types.size}</b><span>個類別</span><b>${companyGroup.count}</b><span>份資料</span></div></summary><div class="market-company-body">${types}</div></details>`;
+  }).join("");
+  return appShell(`<section class="page page-heading"><p class="eyebrow">市場資訊</p><h1>同業資料，<br>集中作市場參考。</h1><p>共 ${marketInformationFiles.length} 份資料，已按保險公司、產品類別及原始子文件夾分層整理。</p></section><section class="page catalog-notice"><b>使用範圍</b><span>只供內部市場研究及培訓參考，不可視作產品建議、銷售文件或最新條款。使用前請自行核實資料日期與來源。</span></section><section class="page market-catalog">${sections}</section>`);
 }
 
 function payment() {
@@ -653,6 +682,58 @@ function guides() {
   guideFiles.forEach(([category, ...path]) => { if (!groups.has(category)) groups.set(category, []); groups.get(category).push(path); });
   const sections = [...groups.entries()].map(([category, files]) => `<section class="catalog-group"><div><span>內部指引</span><h2>${escapeHtml(category)}</h2><small>${files.length} 份資料</small></div><div class="catalog-files">${files.map((path) => fileLink("assets/guides", [category, ...path])).join("")}</div></section>`).join("");
   return appShell(`<section class="page page-heading"><p class="eyebrow">產品資料</p><h1>指引</h1><p>核保與賠償相關資料按類別整理，點選即可開啟原始 PDF。</p></section><section class="page catalog-notice"><b>使用提示</b><span>資料只供內部工作參考，實際個案請以公司最新流程、要求及正式文件為準。</span></section><section class="page catalog-grid">${sections}</section>`);
+}
+
+const claimDocumentGroups = [
+  ["01_意外賠償", "意外賠償", "事故證明、保障條款、契約摘要、常見問題及申請指引", ["保险计划附加契约.pdf", "基本定义及契约条款.pdf", "常见问题.pdf", "意外计划附加契约摘要.pdf", "赔偿申请指引.pdf"]],
+  ["02_醫療賠償", "醫療賠償", "住院、手術、醫療保障條款、惠益表及申請指引", ["亚洲至尊至尊医疗尊贵医疗一览表.pdf", "住院保险计划附加契约.pdf", "住院手术赔偿附加契约倍无忧医疗一览表.pdf", "住院赔偿医疗所需条款.pdf", "基本定义及保单条款.pdf", "常见问题.pdf", "惠益一览表.pdf", "意外及医疗住院惠益一览表.pdf", "手术项目表.pdf", "赔偿申请指引.pdf"]],
+  ["03_傷殘賠償", "傷殘賠償", "傷殘定義、條款、惠益、常見問題及申請指引", ["基本定义及条款.pdf", "常见问题.pdf", "残废惠益.pdf", "赔偿申请指引.pdf"]],
+  ["04_危疾賠償", "危疾賠償", "危疾保障、保單定義、附加契約、惠益表及申請指引", ["保障计划附加契约.pdf", "危疾基本计划一览表.pdf", "危疾附加契约一览表.pdf", "基本保障一览表.pdf", "基本定义及保单条款.pdf", "常见问题.pdf", "惠益一览表.pdf", "赔偿申请指引.pdf"]],
+  ["05_旅遊保險賠償", "旅遊保險賠償", "旅遊保險索償常見問題及申請程序", ["常见问题.pdf", "赔偿申请指引.pdf"]],
+  ["06_身故賠償", "身故賠償", "身故索償總覽、常見問題及申請指引", ["常见问题.pdf", "赔偿申请指引.pdf", "身故赔偿总览.pdf"]],
+];
+
+function claims() {
+ const portal = "https://www3.aia.com.hk/department/ops/getFileList.do";
+ const sources = [
+  ["i培訓資訊", ["「綜合索償表格」用戶指南", "「電子待決回覆」用戶指南"], `${portal}?path=Claims+-+iTraining+Materials&mainid=003&secondid=003.020&type=1&lang=zh`],
+  ["理賠管理模式 · 常見問題", ["說明文件－「合理及慣常」", "常見問題－非特級／特級「健康之寶」（墊底費版本）", "常見問題－「合理及慣常」", "簡單手術參考表"], `${portal}?path=Claims_Management%5CFAQ&mainid=003&secondid=003.010&type=1&lang=zh`],
+  ["賠償小錦囊", ["「賠償小錦囊」索償申請實務參考"], `${portal}?path=Claims%5CTips+on+Claims+Application&mainid=003&secondid=003.007&type=1&lang=zh`]
+ ];
+ const sourceCards = sources.map(([title, files, href]) => `<article class="claims-source"><div class="claims-source-head"><span>內部</span><b>${escapeHtml(title)}</b><a href="${href}" target="_blank" rel="noreferrer">開啟資料頁 ↗</a></div><ul>${files.map((file) => `<li>${escapeHtml(file)}</li>`).join("")}</ul></article>`).join("");
+ const resourceMap = [
+  ["首次提交索償", "「綜合索償表格」用戶指南", "確認表格填寫、文件準備及提交方式。"],
+  ["收到待決／補件通知", "「電子待決回覆」用戶指南", "按通知逐項回覆並補交文件。"],
+  ["查詢醫療費用是否合理", "「合理及慣常」說明文件與常見問題", "了解費用審核原則；個案結果仍以理賠部審批為準。"],
+  ["確認手術分類", "簡單手術參考表", "先作工作參考，實際分類以最新公司準則及個案審核為準。"],
+  ["處理健康之寶相關個案", "非特級／特級「健康之寶」常見問題", "核對指定產品及墊底費版本的常見處理問題。"],
+  ["需要索償實務提醒", "賠償小錦囊", "快速檢查申請細節、常見遺漏與跟進重點。"]
+ ].map(([scenario, resource, note]) => `<article><span>${escapeHtml(scenario)}</span><b>${escapeHtml(resource)}</b><p>${escapeHtml(note)}</p></article>`).join("");
+ const claimTypes = [
+  ["住院／醫療", "住院、手術、日間治療及門診相關索償；先核對保障範圍、醫療需要、合理及慣常費用與自付費。"],
+  ["危疾／癌症", "核對疾病定義、嚴重程度、等候期、生存期及過往索償；診斷名稱本身不等於符合保單定義。"],
+  ["意外", "整理事故經過、日期、地點、受傷機制與治療紀錄；需要時補充警方、僱主或事故證明。"],
+  ["身故", "核對受保人、保單狀況、身故原因、受益人及遺產文件；個案文件要求須以公司最新通知為準。"],
+  ["傷殘／收入保障", "確認職業、不能工作期間、醫療限制及持續證明，並留意定期覆核和待決要求。"],
+  ["保費豁免／其他", "先確定觸發條件、相關基本計劃或附加契約，再按指定表格及證明文件辦理。"]
+ ].map(([title, text]) => `<article><b>${title}</b><p>${text}</p></article>`).join("");
+ const steps = [
+  ["01", "確認保障", "核對保單號碼、受保人、保障項目、保障期、自付費／墊底費及不保事項。"],
+  ["02", "選擇索償類別", "按醫療、危疾、意外、身故、傷殘或其他惠益選用最新表格及渠道。"],
+  ["03", "準備文件", "整理索償表格、身份及保單資料、醫療證明、收據／費用明細和個案所需補充文件。"],
+  ["04", "提交與留底", "經公司指定渠道提交；保留提交日期、文件清單及參考編號，避免重複或遺漏。"],
+  ["05", "回覆待決", "使用電子待決回覆或指定渠道補交資料；逐項對照要求並記錄完成情況。"],
+  ["06", "結果跟進", "向客戶解釋處理狀態和下一步，不預先承諾賠償；需要時按正式程序查詢或覆核。"]
+ ].map(([no, title, text]) => `<li><span>${no}</span><div><b>${title}</b><p>${text}</p></div></li>`).join("");
+ const localClaimDocuments = claimDocumentGroups.map(([folder, title, description, files]) => `<section class="catalog-group"><div><span>理賠資料</span><h2>${escapeHtml(title)}</h2><p>${escapeHtml(description)}</p><small>${files.length} 份文件</small></div><div class="catalog-files">${files.map((filename) => fileLink("assets/claims", [folder, filename])).join("")}</div></section>`).join("");
+ return appShell(`<section class="page page-heading claims-heading"><p class="eyebrow">產品資料 · 理賠</p><h1>理賠工作台</h1><p>按實際處理流程集中整理索償指南、表格、待決回覆與常見問題；原始資料來自AIA營運部內部網站。</p></section>
+ <section class="page catalog-notice claims-notice"><b>使用原則</b><span>本頁為內部工作索引，不構成賠償承諾。個案要求、表格版本、時限及審批結果均以公司最新正式文件和理賠部通知為準。</span></section>
+ <section class="page claims-grid"><article class="claims-panel claims-flow"><div class="panel-kicker">索償流程</div><h2>從確認保障到結果跟進</h2><ol>${steps}</ol></article><article class="claims-panel"><div class="panel-kicker">提交前檢查</div><h2>常用文件清單</h2><ul class="claims-checklist"><li>最新版本索償表格及所需簽署</li><li>保單／受保人／索償人基本資料</li><li>診斷證明、出院摘要、病理或檢查報告</li><li>正本收據、費用明細及付款證明（如適用）</li><li>意外、警方、僱主或其他第三方證明（如適用）</li><li>銀行資料、授權或受益人／遺產文件（視索償類別）</li></ul><p class="claims-tip">文件要求因產品、事故及索償類別而異；收到待決通知後，以通知逐項補交。</p></article></section>
+ <section class="page claims-panel"><div class="panel-kicker">理賠類型</div><h2>按索償性質整理</h2><div class="claims-types">${claimTypes}</div></section>
+ <section class="page claims-panel"><div class="panel-kicker">快速查找</div><h2>遇到這種情況，先看哪份資料</h2><div class="claims-resource-map">${resourceMap}</div></section>
+ <section class="page learning-list-heading"><div><div class="panel-kicker">本機資料庫</div><h2>按理賠類型查找文件</h2><p>已將新增文件按索償性質分類；點選文件名稱即可開啟原始 PDF。</p></div><span>32 份文件</span></section><section class="page catalog-grid claims-document-grid">${localClaimDocuments}</section>
+ <section class="page claims-panel"><div class="panel-kicker">內部資料入口</div><h2>已核對的AIA理賠資料與文件</h2><p class="claims-intro">下列文件名稱已按內部網站逐項整理。網站另設一般指引、AIAS全球緊急支援服務、賠償監管措施、賠償部服務承諾、表格、資料庫及個人療程管理服務等分類；開啟資料頁需要AIA內部帳戶權限。</p><div class="claims-sources">${sourceCards}</div></section>
+ <section class="page claims-panel claims-practice"><div class="panel-kicker">實務提示</div><h2>處理個案時避免這些問題</h2><div><p><b>不要先承諾：</b>是否賠償及賠償金額須經正式審核。</p><p><b>不要自行推斷：</b>疾病名稱、手術名稱或住院事實不一定等同符合保單定義。</p><p><b>不要遺漏時序：</b>記錄事故、診斷、治療、提交及補件日期。</p><p><b>不要混用版本：</b>只使用公司網站上的最新表格和指引。</p></div></section>`);
 }
 
 function discontinued() {
@@ -696,302 +777,34 @@ function sop() {
  return appShell(`<section class="page page-heading"><p class="eyebrow">新人簽單 SOP</p><h1>由第一天開始，<br>走好每一次成交流程。</h1><p>這是一份新人學習路徑：先理解客戶需要，再準備方案、跟進與服務。每完成一步，可在右側勾選。</p></section><section class="page sop-reference"><div><span>學習參考</span><h2>保險銷售循環流程圖</h2><p>先閱讀完整銷售循環，再依下方 10 個步驟開始學習及實踐。</p></div><figure class="sop-reference-image"><img src="assets/training/sales/保險銷售循環流程圖_繁體.png?v=20260921-demand-analysis" alt="新人保險簽單銷售循環 SOP：尋找客戶、接洽約見、會面架構、需求分析、方案說明、顧慮與成交、申請與售後"></figure></section><section class="page sop-summary"><div><span class="tag">${completed.size} / ${sopSteps.length} 已完成</span><h2>從 0 到成交的 10 個步驟</h2></div><button class="text-button" id="resetSop">重設學習進度</button></section><section class="page sop-list">${steps}</section><section class="page sop-footer"><p><b>使用提示：</b>每个有工具协助的步骤下方，均已放上可直接点击的快捷按钮。</p></section>`);
 }
 
-const masterVideoSeries = [
-  {
-    "title": "新人起動",
-    "subtitle": "新人基礎與實戰分享",
-    "videos": [
-      {
-        "title": "新人起動 ep 01",
-        "src": "assets/training/masters/videos/新人起動/新人起動 ep 01.mp4"
-      },
-      {
-        "title": "新人起動 ep 02",
-        "src": "assets/training/masters/videos/新人起動/新人起動 ep 02.mp4"
-      },
-      {
-        "title": "新人起動 ep 03",
-        "src": "assets/training/masters/videos/新人起動/新人起動 ep 03.mp4"
-      },
-      {
-        "title": "新人起動 ep 04",
-        "src": "assets/training/masters/videos/新人起動/新人起動 ep 04.mp4"
-      },
-      {
-        "title": "新人起動 ep 05",
-        "src": "assets/training/masters/videos/新人起動/新人起動 ep 05.mp4"
-      },
-      {
-        "title": "新人起動 ep 06",
-        "src": "assets/training/masters/videos/新人起動/新人起動 ep 06.mp4"
-      },
-      {
-        "title": "新人起動 ep 07",
-        "src": "assets/training/masters/videos/新人起動/新人起動 ep 07.mp4"
-      },
-      {
-        "title": "新人起動 ep 08",
-        "src": "assets/training/masters/videos/新人起動/新人起動 ep 08.mp4"
-      },
-      {
-        "title": "新人起動 ep 09",
-        "src": "assets/training/masters/videos/新人起動/新人起動 ep 09.mp4"
-      },
-      {
-        "title": "新人起動 ep 10",
-        "src": "assets/training/masters/videos/新人起動/新人起動 ep 10.mp4"
-      }
-    ]
-  },
-  {
-    "title": "敗部復活 · EP 01",
-    "subtitle": "高手經驗分段課程",
-    "videos": [
-      {
-        "title": "EP 01 · 第 1 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活.ep01 2:8mp4.mp4"
-      },
-      {
-        "title": "EP 01 · 第 2 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活ep01 1:8.mp4"
-      },
-      {
-        "title": "EP 01 · 第 3 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活ep01 3:8.mp4"
-      },
-      {
-        "title": "EP 01 · 第 4 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活ep01 4:8.mp4"
-      },
-      {
-        "title": "EP 01 · 第 5 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活ep01 5:8.mp4"
-      },
-      {
-        "title": "EP 01 · 第 6 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活ep01 6:8.mp4"
-      },
-      {
-        "title": "EP 01 · 第 7 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活ep01 7:8.mp4"
-      },
-      {
-        "title": "EP 01 · 第 8 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep01/败部复活ep01 8:8.mp4"
-      }
-    ]
-  },
-  {
-    "title": "敗部復活 · EP 02",
-    "subtitle": "高手經驗分段課程",
-    "videos": [
-      {
-        "title": "EP 02 · 第 1 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 1:9.mp4"
-      },
-      {
-        "title": "EP 02 · 第 2 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 2:9.mp4"
-      },
-      {
-        "title": "EP 02 · 第 3 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 3:9.mp4"
-      },
-      {
-        "title": "EP 02 · 第 4 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 4:9.mp4"
-      },
-      {
-        "title": "EP 02 · 第 5 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 5:9.mp4"
-      },
-      {
-        "title": "EP 02 · 第 6 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 6:9.mp4"
-      },
-      {
-        "title": "EP 02 · 第 7 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 7:9.mp4"
-      },
-      {
-        "title": "EP 02 · 第 8 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 8:9.mp4"
-      },
-      {
-        "title": "EP 02 · 第 9 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep02/败部复活ep02 9:9.mp4"
-      }
-    ]
-  },
-  {
-    "title": "敗部復活 · EP 03",
-    "subtitle": "高手經驗分段課程",
-    "videos": [
-      {
-        "title": "EP 03 · 第 1 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 1:8.mp4"
-      },
-      {
-        "title": "EP 03 · 第 2 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 2:8.mp4"
-      },
-      {
-        "title": "EP 03 · 第 3 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 3:8.mp4"
-      },
-      {
-        "title": "EP 03 · 第 4 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 4:8.mp4"
-      },
-      {
-        "title": "EP 03 · 第 5 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 5:8.mp4"
-      },
-      {
-        "title": "EP 03 · 第 6 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 6:8.mp4"
-      },
-      {
-        "title": "EP 03 · 第 7 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 7:8.mp4"
-      },
-      {
-        "title": "EP 03 · 第 8 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep03/败部复活ep03 8:8.mp4"
-      }
-    ]
-  },
-  {
-    "title": "敗部復活 · EP 04",
-    "subtitle": "高手經驗分段課程",
-    "videos": [
-      {
-        "title": "EP 04 · 第 1 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 1:8.mp4"
-      },
-      {
-        "title": "EP 04 · 第 2 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 2:8.mp4"
-      },
-      {
-        "title": "EP 04 · 第 3 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 3:8.mp4"
-      },
-      {
-        "title": "EP 04 · 第 4 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 4:8.mp4"
-      },
-      {
-        "title": "EP 04 · 第 5 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 5:8.mp4"
-      },
-      {
-        "title": "EP 04 · 第 6 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 6:8.mp4"
-      },
-      {
-        "title": "EP 04 · 第 7 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 7:8.mp4"
-      },
-      {
-        "title": "EP 04 · 第 8 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep04/败部复活ep04 8:8.mp4"
-      }
-    ]
-  },
-  {
-    "title": "敗部復活 · EP 05",
-    "subtitle": "高手經驗分段課程",
-    "videos": [
-      {
-        "title": "EP 05 · 第 1 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 1:8.mp4"
-      },
-      {
-        "title": "EP 05 · 第 2 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 2:8.mp4"
-      },
-      {
-        "title": "EP 05 · 第 3 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 3:8.mp4"
-      },
-      {
-        "title": "EP 05 · 第 4 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 4:8.mp4"
-      },
-      {
-        "title": "EP 05 · 第 5 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 5:8.mp4"
-      },
-      {
-        "title": "EP 05 · 第 6 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 6:8.mp4"
-      },
-      {
-        "title": "EP 05 · 第 7 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 7:8.mp4"
-      },
-      {
-        "title": "EP 05 · 第 8 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep05/败部复活ep05 8:8.mp4"
-      }
-    ]
-  },
-  {
-    "title": "敗部復活 · EP 06",
-    "subtitle": "高手經驗分段課程",
-    "videos": [
-      {
-        "title": "EP 06 · 第 1 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 1:9.mp4"
-      },
-      {
-        "title": "EP 06 · 第 2 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 2:9.mp4"
-      },
-      {
-        "title": "EP 06 · 第 3 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 3:9.mp4"
-      },
-      {
-        "title": "EP 06 · 第 4 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 4:9.mp4"
-      },
-      {
-        "title": "EP 06 · 第 5 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 5:9.mp4"
-      },
-      {
-        "title": "EP 06 · 第 6 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 6:9.mp4"
-      },
-      {
-        "title": "EP 06 · 第 7 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 7:9.mp4"
-      },
-      {
-        "title": "EP 06 · 第 8 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 8:9.mp4"
-      },
-      {
-        "title": "EP 06 · 第 9 节",
-        "src": "assets/training/masters/videos/敗部復活/败部复活ep06/败部复活ep06 9:9.mp4"
-      }
-    ]
-  }
-];
-
 const masterBooks = [
   ["01", "醫療天書 2026［完整版］（繁體）", "完整醫療保障參考資料", "assets/training/masters/books/醫療天書 2026 [完整版] (繁體).pdf", "完整版"],
   ["02", "醫療天書 2026［精華版］（繁體）", "快速掌握醫療保障重點", "assets/training/masters/books/醫療天書 2026 [精華版] (繁體).pdf", "精華版"],
   ["03", "退休天書（2026年9月 · 繁體中文）", "退休規劃內部研習資料", "assets/training/masters/books/(2026年9月) 退休天書 (繁體中文).pdf", "最新版"],
 ];
 
+const learningResourceGroups = [
+  ["01_培訓系統", "培訓系統", "內部培訓系統與學習路徑", ["S · E · E · 0 · 培 訓 系 统（MMTS 的培訓系統）.pdf"]],
+  ["02_跨境業務", "跨境業務", "抵港內地人士業務參考", ["抵港內地人士業務.pdf"]],
+  ["03_傳承規劃", "傳承規劃", "家族信託、傳承溝通與證書課程", ["信託在家族傳承中的應用.pdf", "傅承話術.pdf", "傳承大使證書課程.pdf"]],
+  ["04_退休規劃", "退休規劃", "保單逆按與退休收入規劃參考", ["保單逆按計劃 260202.pdf"]],
+];
+
+function masterSubtitleAsset(video, extension, language = "traditional") {
+ const simplified = language === "simplified";
+ const explicit = extension === ".vtt" ? (simplified ? video.subtitleSimplified : video.subtitle) : (simplified ? video.transcriptSimplified : video.transcript);
+ if (explicit) return explicit;
+ return video.src.replace("/videos/", simplified ? "/subtitles-simplified/" : "/subtitles/").replace(/\.mp4$/i, extension);
+}
+
 function learning() {
  const firstVideo = masterVideoSeries[0].videos[0];
- const series = masterVideoSeries.map((group, groupIndex) => `<details class="master-series" ${groupIndex === 0 ? "open" : ""}><summary><span><b>${escapeHtml(group.title)}</b><small>${escapeHtml(group.subtitle)}</small></span><em>${group.videos.length} 段</em></summary><div class="master-video-grid">${group.videos.map((video, videoIndex) => `<button class="master-video-card ${groupIndex === 0 && videoIndex === 0 ? "active" : ""}" data-master-video="${encodeURI(video.src)}" data-master-title="${escapeHtml(video.title)}"><span>${String(videoIndex + 1).padStart(2, "0")}</span><div><b>${escapeHtml(video.title)}</b><small>點擊播放</small></div><i>▶</i></button>`).join("")}</div></details>`).join("");
+ const videoCount = masterVideoSeries.reduce((total, group) => total + group.videos.length, 0);
+ const collectionTabs = masterVideoSeries.map((group, groupIndex) => `<button type="button" class="master-collection-tab ${groupIndex === 0 ? "active" : ""}" data-master-collection="${groupIndex}"><span>${String(groupIndex + 1).padStart(2, "0")}</span><div><b>${escapeHtml(group.title)}</b><small>${escapeHtml(group.subtitle)}</small></div><em>${group.videos.length} 段</em></button>`).join("");
+ const series = masterVideoSeries.map((group, groupIndex) => `<section class="master-series-panel ${groupIndex === 0 ? "active" : ""}" data-master-series-panel="${groupIndex}"><div class="master-video-grid">${group.videos.map((video, videoIndex) => `<button class="master-video-card ${groupIndex === 0 && videoIndex === 0 ? "active" : ""}" data-master-video="${encodeURI(video.src)}" data-master-title="${escapeHtml(video.title)}" data-master-subtitle-traditional="${encodeURI(masterSubtitleAsset(video, ".vtt", "traditional"))}" data-master-subtitle-simplified="${encodeURI(masterSubtitleAsset(video, ".vtt", "simplified"))}" data-master-transcript-traditional="${encodeURI(masterSubtitleAsset(video, ".json", "traditional"))}" data-master-transcript-simplified="${encodeURI(masterSubtitleAsset(video, ".json", "simplified"))}"><span>${String(videoIndex + 1).padStart(2, "0")}</span><div><b>${escapeHtml(video.title)}</b><small>繁／簡字幕及文本</small></div><i>▶</i></button>`).join("")}</div></section>`).join("");
  const books = masterBooks.map(([number, title, description, href, label]) => `<a class="learning-material" href="${encodeURI(href)}" target="_blank" rel="noreferrer"><span class="material-number">${number}</span><span class="material-file">▤</span><div><b>${title}</b><small>${description}</small></div><i>${label}</i><em>開啟 <strong>↗</strong></em></a>`).join("");
- return appShell(`<section class="page learning-hero"><div><p class="eyebrow">內部學習中心 · 高手分享</p><h1>向高手學習，<br>把經驗變成行動。</h1><p>實戰分享、成長課程與天書系列資料</p></div><div class="learning-hero-stats"><div><b>01</b><span>分享影片</span></div><div><b>02</b><span>課程系列</span></div><div><b>03</b><span>天書資料</span></div></div></section><section class="page learning-warning"><b>內部學習材料</b><span>此區只供內部培訓使用，不可轉發客戶或第三方。對客內容仍須以公司最新正式批准文件為準。</span></section><section class="page masters-layout"><div class="master-player"><div class="course-label">高手分享 · 現正播放</div><h2 id="masterVideoTitle">${escapeHtml(firstVideo.title)}</h2><video id="masterVideoPlayer" controls preload="metadata" class="course-video"><source src="${encodeURI(firstVideo.src)}" type="video/mp4">你的瀏覽器未能直接播放此影片。</video><p>從右側課程目錄選擇影片，播放器會自動切換。</p></div><div class="master-catalog"><div class="learning-list-heading"><div><div class="panel-kicker">影片課程</div><h2>高手分享</h2></div><span>60 段影片</span></div>${series}</div></section><section class="page learning-list master-books"><div class="learning-list-heading"><div><div class="panel-kicker">研習資料</div><h2>天書系列</h2><p>按主題整理的內部參考資料，可直接開啟 PDF 閱讀。</p></div><span>3 份資料</span></div>${books}</section><section class="page learning-next"><b>學習提示</b><span>先按系列觀看影片，再使用天書系列整理重點；實際應用前請核對最新正式資料。</span><button class="primary secondary" data-route="sop">前往新人簽單 SOP <span>→</span></button></section>`);
+ const studyResources = learningResourceGroups.map(([folder, title, description, files]) => `<section class="catalog-group"><div><span>專題研習</span><h2>${escapeHtml(title)}</h2><p>${escapeHtml(description)}</p><small>${files.length} 份資料</small></div><div class="catalog-files">${files.map((filename) => fileLink("assets/training/resources", [folder, filename])).join("")}</div></section>`).join("");
+ return appShell(`<section class="page learning-hero"><div><p class="eyebrow">內部學習中心 · 高手分享</p><h1>向高手學習，<br>把經驗變成行動。</h1><p>實戰分享、成長課程與天書系列資料</p></div><div class="learning-hero-stats"><div><b>01</b><span>分享影片</span></div><div><b>02</b><span>課程系列</span></div><div><b>03</b><span>天書資料</span></div></div></section><section class="page learning-warning"><b>內部學習材料</b><span>此區只供內部培訓使用，不可轉發客戶或第三方。對客內容仍須以公司最新正式批准文件為準。</span></section><section class="page master-collections"><div class="learning-list-heading"><div><div class="panel-kicker">影片合集</div><h2>高手分享</h2><p>先選擇合集，再從下方課程目錄播放影片。</p></div><span>${videoCount} 段影片</span></div><div class="master-collection-tabs">${collectionTabs}</div></section><section class="page masters-layout"><div class="master-player"><div class="course-label">高手分享 · 現正播放</div><h2 id="masterVideoTitle">${escapeHtml(firstVideo.title)}</h2><video id="masterVideoPlayer" controls preload="metadata" class="course-video" data-transcript-traditional="${encodeURI(masterSubtitleAsset(firstVideo, ".json", "traditional"))}" data-transcript-simplified="${encodeURI(masterSubtitleAsset(firstVideo, ".json", "simplified"))}"><source src="${encodeURI(firstVideo.src)}" type="video/mp4"><track id="masterVideoTrackTraditional" kind="captions" srclang="zh-Hant" label="繁體中文字幕" src="${encodeURI(masterSubtitleAsset(firstVideo, ".vtt", "traditional"))}" default><track id="masterVideoTrackSimplified" kind="captions" srclang="zh-Hans" label="简体中文字幕" src="${encodeURI(masterSubtitleAsset(firstVideo, ".vtt", "simplified"))}">你的瀏覽器未能直接播放此影片。</video><div class="master-seek-controls"><button type="button" id="masterSeekBack" aria-label="後退十秒">↶ 10秒</button><span id="masterCurrentTime">00:00</span><input id="masterSeekBar" type="range" min="0" max="0" step="0.1" value="0" aria-label="影片播放進度"><span id="masterDuration">00:00</span><button type="button" id="masterSeekForward" aria-label="前進十秒">10秒 ↷</button></div><p>可拖動上方進度條前進或後退；字幕預設為繁體，可隨時切換簡體。</p></div><section class="master-transcript"><div class="master-transcript-head"><div><span>字幕文本與視頻精華</span><h3 id="masterTranscriptTitle">${escapeHtml(firstVideo.title)}</h3></div><button type="button" id="copyMasterTranscript">複製全文</button></div><div class="master-language-row"><span>字幕及文本</span><button type="button" class="active" data-master-language="traditional">繁體</button><button type="button" data-master-language="simplified">简体</button></div><div id="masterTranscriptBody" class="master-transcript-body"><p class="transcript-loading">正在載入字幕文本…</p></div></section></section><section class="page master-catalog"><div class="learning-list-heading"><div><div class="panel-kicker">課程目錄</div><h2 id="masterCollectionTitle">${escapeHtml(masterVideoSeries[0].title)}</h2></div><span id="masterCollectionCount">${masterVideoSeries[0].videos.length} 段</span></div>${series}</section><section class="page learning-list master-books"><div class="learning-list-heading"><div><div class="panel-kicker">研習資料</div><h2>天書系列</h2><p>按主題整理的內部參考資料，可直接開啟 PDF 閱讀。</p></div><span>3 份資料</span></div>${books}</section><section class="page learning-list-heading"><div><div class="panel-kicker">新增資料</div><h2>專題研習資料</h2><p>按用途整理培訓、跨境業務、傳承及退休規劃文件。</p></div><span>6 份資料</span></section><section class="page catalog-grid learning-resource-grid">${studyResources}</section><section class="page learning-next"><b>學習提示</b><span>先按系列觀看影片，再使用天書及專題資料整理重點；實際應用前請核對最新正式資料。</span><button class="primary secondary" data-route="sop">前往新人簽單 SOP <span>→</span></button></section>`);
 }
 
 function ppt() { return appShell(insurancePanel()); }
@@ -1007,7 +820,7 @@ function practice() {
 
 function render() {
  document.documentElement.dataset.theme = getUiTheme();
- const page = { home, salestool, matching, library, compare, market, promotion, discontinued, payment, guides, meeting, sop, learning, ppt, question, practice }[currentModule]();
+ const page = { home, salestool, matching, library, compare, market, promotion, discontinued, payment, guides, claims, meeting, sop, learning, ppt, question, practice }[currentModule]();
  document.querySelector("#app").innerHTML = page;
  document.querySelectorAll("[data-route]").forEach(el => el.addEventListener("click", () => { currentModule = el.dataset.route; render(); }));
  document.querySelectorAll("[data-theme-choice]").forEach((button) => button.addEventListener("click", () => {
@@ -1018,9 +831,104 @@ function render() {
  bindPage();
 }
 
+function transcriptClock(seconds) {
+ const total = Math.max(0, Math.floor(Number(seconds) || 0));
+ return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+function bindMasterSeekControls() {
+ const player = document.querySelector("#masterVideoPlayer");
+ const seek = document.querySelector("#masterSeekBar");
+ const current = document.querySelector("#masterCurrentTime");
+ const duration = document.querySelector("#masterDuration");
+ if (!player || !seek || !current || !duration) return;
+ const syncDuration = () => {
+   const total = Number.isFinite(player.duration) ? player.duration : 0;
+   seek.max = String(total);
+   duration.textContent = transcriptClock(total);
+ };
+ const syncTime = () => {
+   if (!seek.matches(":active")) seek.value = String(player.currentTime || 0);
+   current.textContent = transcriptClock(player.currentTime);
+ };
+ player.addEventListener("loadedmetadata", syncDuration);
+ player.addEventListener("durationchange", syncDuration);
+ player.addEventListener("timeupdate", syncTime);
+ player.addEventListener("emptied", () => { seek.value = "0"; seek.max = "0"; current.textContent = "00:00"; duration.textContent = "00:00"; });
+ seek.addEventListener("input", () => {
+   const target = Number(seek.value) || 0;
+   player.currentTime = target;
+   current.textContent = transcriptClock(target);
+ });
+ document.querySelector("#masterSeekBack")?.addEventListener("click", () => { player.currentTime = Math.max(0, player.currentTime - 10); });
+ document.querySelector("#masterSeekForward")?.addEventListener("click", () => { player.currentTime = Math.min(Number.isFinite(player.duration) ? player.duration : player.currentTime + 10, player.currentTime + 10); });
+ if (player.readyState >= 1) syncDuration();
+ syncTime();
+}
+
+function transcriptTextHtml(value) {
+ return escapeHtml(String(value || "")).replace(/【待確認：([^】]*)】/g, '<mark class="transcript-uncertain" title="语音识别把握较低，请核对原声">$1</mark>');
+}
+
+function cleanTranscriptText(value) {
+ return String(value || "").replace(/【待確認：([^】]*)】/g, "$1");
+}
+
+async function loadMasterTranscript(url, fallbackTitle) {
+ const body = document.querySelector("#masterTranscriptBody");
+ const title = document.querySelector("#masterTranscriptTitle");
+ const copyButton = document.querySelector("#copyMasterTranscript");
+ if (!body || !title || !copyButton) return;
+ title.textContent = fallbackTitle || "影片字幕文本";
+ copyButton.disabled = true;
+ copyButton.dataset.copyText = "";
+ if (!url) {
+   body.innerHTML = `<div class="transcript-empty"><b>此影片的字幕正在整理</b><span>完成後會在這裡顯示重點及完整字幕文本。</span></div>`;
+   return;
+ }
+ body.innerHTML = `<p class="transcript-loading">正在載入字幕文本…</p>`;
+ try {
+   const response = await fetch(url);
+   if (response.status === 404) {
+     body.innerHTML = `<div class="transcript-empty"><b>此影片的字幕正在整理</b><span>本機完成轉寫後，重新整理頁面即可查看。</span></div>`;
+     return;
+   }
+   if (!response.ok) throw new Error(`HTTP ${response.status}`);
+   const data = await response.json();
+   title.textContent = fallbackTitle || data.title || "影片字幕文本";
+   const summary = (data.summary || []).map((item) => `<li>${transcriptTextHtml(item)}</li>`).join("");
+   const paragraphs = (data.paragraphs || []).map((item) => `<article class="transcript-paragraph"><button type="button" data-transcript-time="${Number(item.start) || 0}">${transcriptClock(item.start)}</button><p contenteditable="true" spellcheck="false" title="可直接点击修改字幕文本">${transcriptTextHtml(item.text)}</p></article>`).join("");
+   body.innerHTML = `${summary ? `<div class="transcript-summary"><b>本集精要</b><ul>${summary}</ul></div>` : ""}<div class="transcript-full"><div class="transcript-full-head"><b>完整字幕文本</b><span>点击正文即可编辑</span></div>${paragraphs}</div>`;
+   copyButton.dataset.copyText = (data.paragraphs || []).map((item) => `[${transcriptClock(item.start)}] ${cleanTranscriptText(item.text)}`).join("\n\n");
+   copyButton.disabled = !copyButton.dataset.copyText;
+   body.querySelectorAll("[data-transcript-time]").forEach((button) => button.addEventListener("click", () => {
+     const player = document.querySelector("#masterVideoPlayer");
+     if (!player) return;
+     player.currentTime = Number(button.dataset.transcriptTime) || 0;
+     player.play().catch(() => {});
+   }));
+ } catch (error) {
+   body.innerHTML = `<div class="transcript-empty"><b>字幕文本暫時無法載入</b><span>${escapeHtml(error.message)}</span></div>`;
+ }
+}
+
+function setMasterLanguage(language = "traditional") {
+ const player = document.querySelector("#masterVideoPlayer");
+ const title = document.querySelector("#masterVideoTitle")?.textContent || "影片字幕文本";
+ if (!player) return;
+ document.querySelectorAll("[data-master-language]").forEach((button) => button.classList.toggle("active", button.dataset.masterLanguage === language));
+ if (player.textTracks.length >= 2) {
+   player.textTracks[0].mode = language === "traditional" ? "showing" : "disabled";
+   player.textTracks[1].mode = language === "simplified" ? "showing" : "disabled";
+ }
+ const transcript = language === "simplified" ? player.dataset.transcriptSimplified : player.dataset.transcriptTraditional;
+ loadMasterTranscript(transcript, title);
+}
+
 function bindPage() {
  bindInsurance();
  bindSalesTool();
+ bindMasterSeekControls();
  document.querySelector("#generateMeeting")?.addEventListener("click", generateMeeting);
  document.querySelector("#matchPolicies")?.addEventListener("click", matchPolicies);
  document.querySelector("#askQuestion")?.addEventListener("click", answerQuestion);
@@ -1037,17 +945,50 @@ function bindPage() {
    localStorage.removeItem("aia-sop-completed");
    render();
  });
+ document.querySelectorAll("[data-master-collection]").forEach((button) => button.addEventListener("click", () => {
+   const selected = button.dataset.masterCollection;
+   document.querySelectorAll("[data-master-collection]").forEach((item) => item.classList.toggle("active", item === button));
+   document.querySelectorAll("[data-master-series-panel]").forEach((panel) => panel.classList.toggle("active", panel.dataset.masterSeriesPanel === selected));
+   const group = masterVideoSeries[Number(selected)];
+   const title = document.querySelector("#masterCollectionTitle");
+   const count = document.querySelector("#masterCollectionCount");
+   if (title && group) title.textContent = group.title;
+   if (count && group) count.textContent = `${group.videos.length} 段`;
+   document.querySelector(".master-catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
+ }));
  document.querySelectorAll("[data-master-video]").forEach((button) => button.addEventListener("click", () => {
    const player = document.querySelector("#masterVideoPlayer");
    const title = document.querySelector("#masterVideoTitle");
    if (!player || !title) return;
    player.src = button.dataset.masterVideo;
+   const traditionalTrack = document.querySelector("#masterVideoTrackTraditional");
+   const simplifiedTrack = document.querySelector("#masterVideoTrackSimplified");
+   if (traditionalTrack) traditionalTrack.src = button.dataset.masterSubtitleTraditional || "";
+   if (simplifiedTrack) simplifiedTrack.src = button.dataset.masterSubtitleSimplified || "";
+   player.dataset.transcriptTraditional = button.dataset.masterTranscriptTraditional || "";
+   player.dataset.transcriptSimplified = button.dataset.masterTranscriptSimplified || "";
    title.textContent = button.dataset.masterTitle;
    document.querySelectorAll("[data-master-video]").forEach((item) => item.classList.toggle("active", item === button));
    player.load();
+   setMasterLanguage("traditional");
+   window.setTimeout(() => setMasterLanguage("traditional"), 0);
    player.play().catch(() => {});
    player.scrollIntoView({ behavior: "smooth", block: "center" });
  }));
+ document.querySelectorAll("[data-master-language]").forEach((button) => button.addEventListener("click", () => setMasterLanguage(button.dataset.masterLanguage)));
+ document.querySelector("#copyMasterTranscript")?.addEventListener("click", async (event) => {
+   const edited = [...document.querySelectorAll(".transcript-paragraph")].map((item) => {
+     const time = item.querySelector("button")?.textContent || "";
+     const content = item.querySelector("p")?.innerText || "";
+     return `[${time}] ${content}`;
+   }).join("\n\n");
+   const text = edited || event.currentTarget.dataset.copyText;
+   if (!text) return;
+   await navigator.clipboard.writeText(text);
+   event.currentTarget.textContent = "已複製";
+   window.setTimeout(() => { event.currentTarget.textContent = "複製全文"; }, 1500);
+ });
+ if (document.querySelector("#masterTranscriptBody")) setMasterLanguage("traditional");
  document.querySelectorAll("[data-library-category]").forEach((button) => button.addEventListener("click", () => {
    selectedLibraryCategory = button.dataset.libraryCategory;
    render();

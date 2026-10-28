@@ -316,6 +316,20 @@ def pct_of(part, whole, digits=1):
     return f"{part / whole * 100:.{digits}f}%" if whole else "0%"
 
 
+def pct_of_truncated(part, whole, digits=1):
+    """Match the approved overview's conservative display convention.
+
+    The reference deck shows 49,165.37 / 120,000 as 40.9%, not the rounded
+    41.0%. Calculations retain full precision; only this display is truncated.
+    """
+    if not whole:
+        return "0%"
+    import math
+    scale = 10 ** digits
+    value = math.floor((part / whole * 100) * scale) / scale
+    return f"{value:.{digits}f}%"
+
+
 def _date_parts(text):
     """'2026年10月11日' -> (2026, 10, 11); tolerates missing pieces."""
     import re
@@ -460,6 +474,28 @@ def fill_withdrawal(slide, cfg, plan):
     return True
 
 
+def mark_withdrawal_unavailable(slide, cfg, plan):
+    """Keep the template page but remove sample values when no withdrawal
+    illustration exists in the uploaded proposal."""
+    product = cfg.get("product") or ""
+    age = plan["age"]
+    years = plan["years"]
+    title = cfg.get("insuredTitle") or (
+        "小姐" if (cfg.get("gender") or "").startswith("女") else "先生"
+    )
+    sh = find(slide, "岁 先生")
+    if sh:
+        replace_runs(sh, [
+            ("XX", str(age), 1), ("岁 先生", f"岁{title}", 1), ("/", "", 1),
+            ("=环宇盈活", f" {product}（", 1), ("5", str(years), 1),
+        ])
+    for needle in ("xx-xx岁", "岁每年提取", "选择退保或传承", "实际回报年利率", "一生合共提取"):
+        sh = find(slide, needle)
+        if sh:
+            set_lines(sh, ["资料暂未提供"])
+    return slide
+
+
 def _coupon_sentence(cell, coupons, total, fx):
     """Rebuild 「…會轉 N 張美元 X 及 M 張美元 Y 的現金券…」 for any coupon count."""
     runs = cell.text_frame.paragraphs[0].runs
@@ -560,7 +596,7 @@ def fill_prepay(slide, cfg, plan, years, interest_key, rate_key):
             # Template page 9 has a blank run where the amount belongs.
             rules += [("美元", f"美元{money(interest)}", 1), (" ", "", 1)]
         rules += [("*(4.3%", f"({pct_short(rate)}", 1),
-                  ("*(40.9%", f"({pct_of(interest, premium)}", 1)]
+                  ("*(40.9%", f"({pct_of_truncated(interest, premium)}", 1)]
         replace_runs(sh, rules)
 
     sh = find(slide, "保费享保证优惠年利率")
@@ -654,17 +690,13 @@ def build_overview_deck(cfg, plan, template_path, keep_scenario_pages=False):
     if withdrawal_index is not None:
         has_withdrawal = fill_withdrawal(pages[withdrawal_index], cfg, plan)
 
-    drop = []
-    # Without a withdrawal example in the proposal the page cannot be filled.
     if withdrawal_index is not None and not has_withdrawal:
-        drop.append(pages[withdrawal_index])
+        mark_withdrawal_unavailable(pages[withdrawal_index], cfg, plan)
 
     # Promotion numbers (rebate %, coupon face value, prepaid-interest rate)
-    # are set by the insurer per campaign and are never in the proposal. When
-    # they are missing we leave the template's own XX / XXX placeholders in
-    # place rather than writing 0 -- a silently-zero discount is the one
-    # mistake nobody notices. The four pages stay in the deck so the agent can
-    # see exactly which boxes still need typing.
+    # are set by the insurer per campaign and are never in the proposal. A
+    # proposal-only export keeps the full seven-page template. Missing campaign
+    # values remain visibly unavailable rather than borrowing old figures.
     promo_cfg = cfg.get("promo") or {}
     has_promo = any(promo_cfg.get(k) for k in PROMO_KEYS)
     if has_promo:
@@ -677,10 +709,13 @@ def build_overview_deck(cfg, plan, template_path, keep_scenario_pages=False):
             fill_prepay(rest[2], cfg, plan, 4, "prepay4Interest", "prepay4Rate")
         if len(rest) >= 4:
             fill_summary_grid(rest[3], cfg, plan)
-
-    for slide in drop:
-        index = list(prs.slides).index(slide)
-        delete_slide(prs, index)
+    else:
+        for slide in pages[2:6]:
+            for shape in slide.shapes:
+                if getattr(shape, "has_text_frame", False):
+                    for run in _runs(shape):
+                        if "XX" in run.text or "XXX" in run.text:
+                            run.text = run.text.replace("XXX", "资料暂未提供").replace("XX", "资料暂未提供")
 
     bio = io.BytesIO()
     prs.save(bio)

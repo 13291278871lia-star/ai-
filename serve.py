@@ -22,7 +22,20 @@ from proposal_parse import parse_proposal
 SITE_ROOT = Path(__file__).resolve().parent
 
 # 资料库白名单：前端传 key（tax/health）或目录名都可以，其余一律拒绝。
-LIBRARY_DIRS = {"tax": "01_友扣稅", "health": "02_AIA健康系列"}
+LIBRARY_DIRS = {
+    "tax": "01_友扣稅",
+    "health": "02_AIA健康系列",
+    "term": "03_定期壽險",
+    "medical": "04_醫療",
+    "criticalIllness": "05_危疾",
+    "severityHealth": "06_嚴重程度健康保障",
+    "personalAccident": "07_個人意外",
+    "universalLife": "08_萬用壽險",
+    "wholeLifeSavings": "09_終身壽險及儲蓄壽險",
+    "investmentLinked": "10_投資相連計劃",
+    "disability": "11_傷殘",
+    "personalProperty": "12_個人財物保險",
+}
 
 # proposal 里没有汇率时的兜底值。面向客户的 PPT 会用到它，请定期核对，
 # 也可以用环境变量 DEFAULT_FX 覆盖。
@@ -143,6 +156,8 @@ class AppHandler(SimpleHTTPRequestHandler):
     extensions_map = SimpleHTTPRequestHandler.extensions_map | {
         ".js": "application/javascript",
         ".mjs": "application/javascript",
+        ".vtt": "text/vtt; charset=utf-8",
+        ".json": "application/json; charset=utf-8",
     }
 
     def __init__(self, *args, **kwargs):
@@ -221,6 +236,9 @@ class AppHandler(SimpleHTTPRequestHandler):
         if self._is_blocked_path():
             self.send_text_error(404, "Not found")
             return
+        if urlparse(self.path).path.lower().endswith(".mp4"):
+            self.send_video(head_only=True)
+            return
         super().do_HEAD()
 
     def do_GET(self):
@@ -234,7 +252,65 @@ class AppHandler(SimpleHTTPRequestHandler):
         if self._is_blocked_path():
             self.send_text_error(404, "Not found")
             return
+        if request.path.lower().endswith(".mp4"):
+            self.send_video()
+            return
         super().do_GET()
+
+    def send_video(self, head_only=False):
+        """Serve MP4 files with byte-range support so browser seeking works."""
+        path = Path(self.translate_path(urlparse(self.path).path))
+        if not path.is_file():
+            self.send_text_error(404, "Not found")
+            return
+        size = path.stat().st_size
+        start, end = 0, max(0, size - 1)
+        range_header = self.headers.get("Range", "")
+        partial = False
+        if range_header.startswith("bytes="):
+            match = re.fullmatch(r"(\d*)-(\d*)", range_header[6:].strip())
+            if not match:
+                self.send_response(416)
+                self.send_header("Content-Range", f"bytes */{size}")
+                self.end_headers()
+                return
+            first, last = match.groups()
+            if first:
+                start = int(first)
+                end = int(last) if last else end
+            elif last:
+                length = min(int(last), size)
+                start = size - length
+            if start >= size or start > end:
+                self.send_response(416)
+                self.send_header("Content-Range", f"bytes */{size}")
+                self.end_headers()
+                return
+            end = min(end, size - 1)
+            partial = True
+
+        length = max(0, end - start + 1)
+        self.send_response(206 if partial else 200)
+        self.send_header("Content-Type", "video/mp4")
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Content-Length", str(length))
+        if partial:
+            self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+        self.end_headers()
+        if head_only:
+            return
+        try:
+            with path.open("rb") as source:
+                source.seek(start)
+                remaining = length
+                while remaining:
+                    chunk = source.read(min(1024 * 1024, remaining))
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+                    remaining -= len(chunk)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def do_POST(self):
         request = urlparse(self.path)

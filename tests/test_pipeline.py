@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -21,7 +22,7 @@ import deck_builder  # noqa: E402
 import irr_model  # noqa: E402
 
 TEMPLATE = ROOT / "assets" / "ppt-reference" / "gf-template.pptx"
-PROPOSAL = Path("/root/uploads/work/proposal.pdf")
+PROPOSAL = Path(os.environ.get("PROPOSAL_FIXTURE", "/root/uploads/work/proposal.pdf"))
 
 PASS, FAIL = [], []
 
@@ -110,6 +111,7 @@ def t_wan_formatting():
     eq(deck_builder.wan(816000), "81.6")
     eq(deck_builder.wan(65000), "6.5")
     eq(deck_builder.wan(4225000), "422.5")
+    eq(deck_builder.pct_of_truncated(49165.37046528, 120000), "40.9%")
 
 
 def t_build_plan_keeps_only_parsed_years():
@@ -145,7 +147,7 @@ def t_deck_drops_withdrawal_page():
         raise AssertionError("缺少模版 assets/ppt-reference/gf-template.pptx")
     plan = irr_model.build_plan(_cfg())
     data = deck_builder.build_overview_deck(_cfg(), plan, TEMPLATE)
-    eq(len(_pages(data)), 6, "沒有提取方案時應為6頁")
+    eq(len(_pages(data)), 7, "沒有提取方案及推廣資料時仍應輸出完整7頁")
 
 
 def t_deck_keeps_withdrawal_page():
@@ -155,23 +157,21 @@ def t_deck_keeps_withdrawal_page():
                   "byYear": {}, "residualYear": 85, "residual": 1097542, "residualAge": 100}
     plan = irr_model.build_plan(_cfg(withdrawal=withdrawal))
     data = deck_builder.build_overview_deck(_cfg(withdrawal=withdrawal), plan, TEMPLATE)
-    eq(len(_pages(data)), 7, "有提取方案時應為7頁")
+    eq(len(_pages(data)), 7, "有提取方案但沒有推廣資料時仍應為7頁")
     assert plan["withdrawal"]["count"] == 65
 
 
-def t_deck_keeps_placeholders_without_promo():
-    """No rebate / coupon / prepaid rate -> the promo boxes stay as XX/XXX so a
-    human can see they were never filled."""
+def t_deck_marks_promotion_without_promo():
+    """No campaign input -> keep all seven pages and mark missing values."""
     if not TEMPLATE.is_file():
         raise AssertionError("缺少模版")
     plan = irr_model.build_plan(_cfg())
     data = deck_builder.build_overview_deck(_cfg(), plan, TEMPLATE)
-    text = "\n".join(
-        sh.text_frame.text
-        for page in _pages(data) for sh in page.shapes
-        if getattr(sh, "has_text_frame", False)
-    )
-    assert "XXX" in text, "缺少優惠資料時應保留模版佔位符，方便肉眼發現"
+    pages = _pages(data)
+    eq(len(pages), 7, "缺少優惠資料時仍應保留完整模板")
+    text = "\n".join(sh.text_frame.text for page in pages for sh in page.shapes
+                     if getattr(sh, "has_text_frame", False))
+    assert "资料暂未提供" in text, "缺少優惠資料時應明確標示"
 
 
 def t_deck_fills_promo():
@@ -200,10 +200,22 @@ def t_deck_leaves_template_placeholder_alone():
         raise AssertionError("缺少模版")
     plan = irr_model.build_plan(_cfg())
     data = deck_builder.build_overview_deck(_cfg(), plan, TEMPLATE)
-    eq(len(_pages(data)), 6)
+    eq(len(_pages(data)), 7)
 
 
 # ------------------------------------------------------------------- proposal
+
+def t_reference_proposal_surrender_columns():
+    """The compact Wealth Advance layout places surrender *total* before
+    death-benefit columns. It must not be counted as another dividend column."""
+    import proposal_parse
+    reference = ROOT / "assets" / "ppt-reference" / "policy-example.pdf"
+    parsed = proposal_parse.parse_proposal(reference.read_bytes())
+    expected = {20: 157510, 30: 255880, 40: 423620, 50: 755231}
+    for year, total in expected.items():
+        row = next(r for r in parsed["rows"] if r[0] == year)
+        eq(round(row[1] + row[2]), total, f"第{year}年退保總額不可重複相加")
+        eq(round(parsed["detail"][str(year)]["total"]), total, f"第{year}年建議書總額")
 
 def t_proposal_parse():
     if not PROPOSAL.is_file():

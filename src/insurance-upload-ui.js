@@ -1,6 +1,11 @@
 import {readUpload,mapTable,escapeHtml as esc} from './insurance-import.js';
-const MILESTONES=[20,30,40,50];
-const filterMilestones=rows=>{const ms=rows.filter(r=>MILESTONES.includes(r[0]));return ms.length>=2?ms:rows;};
+export const PPT_TEMPLATE_YEARS=[20,30,40,50];
+export function rowsForPptTemplate(rows){
+ const selected=PPT_TEMPLATE_YEARS.map(year=>rows.find(row=>Number(row?.[0])===year)).filter(Boolean);
+ const missing=PPT_TEMPLATE_YEARS.filter(year=>!selected.some(row=>Number(row[0])===year));
+ if(missing.length)throw Error(`計劃書缺少PPT模版所需的第${missing.join('、')}年數值，不會自行補算`);
+ return selected;
+}
 export function bindUpload({apply,clear,get,render}){
  const host=document.querySelector('#insuranceUpload');if(!host)return;let upload=null,revision=0;
  host.innerHTML=`<div class="insurance-upload"><h3>上傳 AIA 計劃書，自動製作完整 PPT</h3><label class="field">選擇計劃書 PDF 或其他資料檔<input id="insUploadFile" type="file" accept=".pptx,.pdf,.xlsx,.csv,.tsv,.json"></label><p class="tiny">標準 AIA 計劃書 PDF 會自動解析、完成 13 項校驗並填入 GF 概覽模版；校驗失敗時不會出稿。亦支援 PPTX／Excel／CSV／JSON 手動對應，檔案只在本機工作平台處理。掃描 PDF 需先 OCR。</p><a href="/assets/ppt-reference/import-example.csv" download>下載 CSV 欄位範例</a> · <button type="button" class="text-button" id="saveInsuranceData">儲存當前方案 JSON</button><p id="insUploadStatus" role="status"></p><div id="insUploadMapping"></div></div>`;
@@ -15,7 +20,7 @@ export function bindUpload({apply,clear,get,render}){
   status([`已讀取 ${upload.filename}。請補齊下方保費等欄位，再核對列對應。`,...(upload.warnings||[]),table.meta?.currency&&!['USD','美元','美金'].includes(table.meta.currency)?`原檔幣種為 ${table.meta.currency}，此工具只接受美元，請勿直接套用。`:'' ].filter(Boolean).join('\n'));
   root.querySelector('#insUploadSheet').onchange=choose;
   const mapping=()=>({year:Number(root.querySelector('#map-year').value),guaranteed:Number(root.querySelector('#map-guaranteed').value),bonus:Number(root.querySelector('#map-bonus').value),total:Number(root.querySelector('#map-total').value),mode:root.querySelector('#map-mode').value,yearKind:root.querySelector('#map-yearKind').value,age:document.querySelector('#insAge').value.trim()?Number(document.querySelector('#insAge').value):NaN});
-  const suggest=()=>{try{const r=mapTable(table,mapping()).rows;const common=r.filter(r=>[20,30,40,50,60].includes(r[0])).map(r=>r[0]);root.querySelector('#importYears').value=r.length>8&&common.length>=2?common.join(','):'';}catch{}};suggest();
+  const suggest=()=>{try{const r=mapTable(table,mapping()).rows;const common=r.filter(r=>PPT_TEMPLATE_YEARS.includes(r[0])).map(r=>r[0]);root.querySelector('#importYears').value=r.length>8&&common.length===PPT_TEMPLATE_YEARS.length?common.join(','):'';}catch{}};suggest();
   root.querySelector('#applyInsuranceUpload').onclick=()=>{try{
    if(!root.querySelector('#importUSD').checked)throw Error('請先核對幣種及方案口徑');
    if(table.meta?.currency&&!['USD','美元','美金'].includes(table.meta.currency))throw Error('原檔不是美元方案，不能直接以美元計算');
@@ -39,14 +44,13 @@ export function bindUpload({apply,clear,get,render}){
     if(current!==revision||!host.isConnected)return;
     if(resp.ok){
      const data=await resp.json();const p=data.profile||{};
-     if(data.known&&p.product&&p.age&&p.premium){
-      const w=data.withdrawalPlan;
-      apply({product:p.product,age:p.age,premium:p.premium,years:p.years||1,levy:p.levy??0,fx:p.fx||6.8,source:`${file.name} · 後端自動解析（${data.rowCount}個年度）`,rows:filterMilestones(data.rows),proposal:data});
-      status([`✅ 已自動辨識 AIA 計劃書，套用 ${data.rowCount} 個年度數據。`,
+     if(data.known&&p.product&&p.age!==null&&p.age!==undefined&&p.premium){
+      const w=data.withdrawalPlan,rows=rowsForPptTemplate(data.rows||[]);
+      apply({product:p.product,age:p.age,premium:p.premium,years:p.years||1,levy:p.levy??0,fx:p.fx||6.8,source:`${file.name} · 後端自動解析（原檔${data.rowCount}個年度；模版取4個年度）`,rows,proposal:data});
+      status([`✅ 已自動辨識 AIA 計劃書；按PPT模版只套用第 ${PPT_TEMPLATE_YEARS.join('、')} 年，共 ${rows.length} 個年度數據。`,
        w?`識別到提取方案：${w.startAge}–${w.endAge}歲每年 ${Number(w.annual).toLocaleString('en-US')} ×${w.count}年${w.residual?`，${w.residualAge}歲剩餘 ${Number(w.residual).toLocaleString('en-US')}`:''}（建議書第${(w.page||[]).join('、')}頁）。`:'計劃書沒有「現金提取舉例」，第2頁提取概覽會自動省略。',
-       '正在执行13项校验并生成7页概览 PPT…'].join('\n'));
-      setTimeout(()=>{const btn=document.querySelector('#downloadInsurance');if(btn&&!btn.disabled){btn.click();}else{status(`已套用數據，請按右側「下載7頁概覽 PPT」按鈕。`);}},700);
-      host.querySelector('#insUploadMapping').innerHTML=`<p class="tiny">已自動套用後端解析結果（${data.rowCount}年）。優惠與推廣數字計劃書沒有，請在左側「優惠與推廣參數」按當期小冊子補齊，否則第3–6頁會保留模版佔位符。如需手動調整，<button type="button" class="text-button" id="switchManualMap">改用瀏覽器手動對應</button>。</p>`;
+       '已套用計劃書數據。請核對右側結果，並在「優惠與推廣參數」填入當期資料後下載完整7頁可編輯PPTX。'].join('\n'));
+      host.querySelector('#insUploadMapping').innerHTML=`<p class="tiny">原檔已解析 ${data.rowCount} 個年度；表格、IRR折線圖及PPT按模版只使用第 ${PPT_TEMPLATE_YEARS.join('、')} 年。PPT固定輸出7頁；計劃書沒有的優惠與推廣數字不會推測，留空时會標示「資料暫未提供」。填妥优惠参数后，按右侧「下载可编辑 PPTX」。如需手動調整，<button type="button" class="text-button" id="switchManualMap">改用瀏覽器手動對應</button>。</p>`;
       host.querySelector('#switchManualMap').onclick=()=>{status('改用手動對應，請稍候…');manualRead(file,current);};
       return;
      }

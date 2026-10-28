@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import {csvRows,makeTable,mapTable,pdfLines,pdfTable,pdfMeta,numeric,readUpload} from '../src/insurance-import.js';
 import {calculate,example} from '../src/insurance-ppt.js';
 import {chartScale,chartSvg} from '../src/insurance-chart.js';
+import {PPT_TEMPLATE_YEARS,rowsForPptTemplate} from '../src/insurance-upload-ui.js';
 const raw=csvRows(fs.readFileSync('assets/ppt-reference/import-example.csv','utf8'));
 const table=makeTable('sample',raw),c=table.columns;
 assert.equal(table.meta.premium,20000);assert.equal(table.meta.age,35);
@@ -23,5 +24,8 @@ const {getDocument}=await import('/Users/choix/.cache/codex-runtimes/codex-prima
 const pdf=await getDocument({data:new Uint8Array(fs.readFileSync('assets/ppt-reference/policy-example.pdf')),useSystemFonts:true,isEvalSupported:false}).promise;
 const p1=pdfLines((await(await pdf.getPage(1)).getTextContent()).items),p2=pdfLines((await(await pdf.getPage(2)).getTextContent()).items);
 const meta=pdfMeta(p1),pt=pdfTable(p2,2);assert.equal(meta.age,40);assert.equal(meta.premium,105760);assert.equal(meta.levy,12.76);assert.equal(pt.columns.guaranteed,2);
-const pr=mapTable(pt,{...pt.columns,mode:'split',age:meta.age}).rows;assert.deepEqual(pr.filter(r=>[20,30,40,50,60].includes(r[0])),example.rows);
+const pr=mapTable(pt,{...pt.columns,mode:'split',age:meta.age}).rows;assert.deepEqual(pr.filter(r=>PPT_TEMPLATE_YEARS.includes(r[0])),example.rows);
+assert.deepEqual(PPT_TEMPLATE_YEARS,[20,30,40,50]);
+assert.deepEqual(rowsForPptTemplate(pr).map(r=>r[0]),PPT_TEMPLATE_YEARS);
+assert.throws(()=>rowsForPptTemplate(pr.filter(r=>r[0]!==40)),/第40年/);
 await pdf.destroy();console.log('PASS: CSV quoting, metadata, totals-only, age/year mapping, conflicts, missing values, negative IRR, nonuniform years, JSON, PDF extraction');
